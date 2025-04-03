@@ -1,0 +1,1602 @@
+Solução Aprimorada de Prospecção por Voz com IA: Incluindo MCP e Integrações Adicionais
+Vou expandir a solução para incluir um servidor MCP (Message Control Protocol) para gerenciar múltiplas integrações como WhatsApp Oficial, calendários e APIs externas, além de adicionar suporte para ramais e troncos SIP adicionais conforme solicitado.
+
+Docker Compose Expandido com MCP e Integrações
+yaml
+version: '3.8'
+
+networks:
+  network_public:
+    external: true
+  voice_internal:
+    driver: bridge
+
+services:
+  # Frontend Web
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: voiceai-frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.voiceai-frontend.rule=Host(`voiceai.seudominio.com`)"
+      - "traefik.http.routers.voiceai-frontend.entrypoints=websecure"
+      - "traefik.http.routers.voiceai-frontend.tls=true"
+      - "traefik.http.routers.voiceai-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.voiceai-frontend.loadbalancer.server.port=80"
+    networks:
+      - network_public
+      - voice_internal
+
+  # API de Orquestração
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voiceai-api
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+      - ./shared/logs:/app/logs
+      - ./shared/uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - TZ=America/Sao_Paulo
+      - STT_SERVICE=http://speech-to-text:8000
+      - LLM_SERVICE=http://language-model:8080
+      - TTS_SERVICE=http://text-to-speech:5002
+      - SIP_SERVICE=http://asterisk:8088
+      - MCP_SERVICE=http://mcp-server:9000
+      - MONGO_URI=mongodb://mongodb:27017/voiceai
+      - JWT_SECRET=seu_jwt_secret_seguro
+      - API_KEY=sua_api_key_segura
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.voiceai-api.rule=Host(`api.voiceai.seudominio.com`)"
+      - "traefik.http.routers.voiceai-api.entrypoints=websecure"
+      - "traefik.http.routers.voiceai-api.tls=true"
+      - "traefik.http.routers.voiceai-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.voiceai-api.loadbalancer.server.port=3000"
+    depends_on:
+      - mongodb
+      - speech-to-text
+      - language-model
+      - text-to-speech
+      - asterisk
+      - mcp-server
+    networks:
+      - network_public
+      - voice_internal
+
+  # Servidor MCP (Message Control Protocol)
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: voiceai-mcp-server
+    restart: unless-stopped
+    volumes:
+      - ./mcp-server:/app
+      - ./shared/mcp_data:/app/data
+    environment:
+      - NODE_ENV=production
+      - TZ=America/Sao_Paulo
+      - MONGO_URI=mongodb://mongodb:27017/voiceai_mcp
+      - REDIS_URI=redis://redis:6379
+      - API_KEY=mcp_api_key_segura
+      - WHATSAPP_BUSINESS_ID=seu_id_whatsapp_business
+      - WHATSAPP_ACCESS_TOKEN=seu_token_whatsapp
+      - CALENDAR_API_KEY=seu_api_key_google_calendar
+      - EVOLUTION_API_URL=https://sua-evolution-api.com
+      - EVOLUTION_API_KEY=sua_evolution_api_key
+    ports:
+      - "9000:9000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.voiceai-mcp.rule=Host(`mcp.voiceai.seudominio.com`)"
+      - "traefik.http.routers.voiceai-mcp.entrypoints=websecure"
+      - "traefik.http.routers.voiceai-mcp.tls=true"
+      - "traefik.http.routers.voiceai-mcp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.voiceai-mcp.loadbalancer.server.port=9000"
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - network_public
+      - voice_internal
+
+  # Clientes MCP para diferentes integrações
+  mcp-whatsapp:
+    build:
+      context: ./mcp-clients/whatsapp
+      dockerfile: Dockerfile
+    container_name: voiceai-mcp-whatsapp
+    restart: unless-stopped
+    volumes:
+      - ./mcp-clients/whatsapp:/app
+      - ./shared/whatsapp_media:/app/media
+    environment:
+      - MCP_SERVER=http://mcp-server:9000
+      - MCP_CLIENT_ID=whatsapp-official
+      - MCP_CLIENT_TOKEN=token_seguro_whatsapp
+      - WHATSAPP_BUSINESS_ID=seu_id_whatsapp_business
+      - WHATSAPP_ACCESS_TOKEN=seu_token_whatsapp
+    depends_on:
+      - mcp-server
+    networks:
+      - voice_internal
+
+  mcp-evolution:
+    build:
+      context: ./mcp-clients/evolution
+      dockerfile: Dockerfile
+    container_name: voiceai-mcp-evolution
+    restart: unless-stopped
+    volumes:
+      - ./mcp-clients/evolution:/app
+      - ./shared/evolution_media:/app/media
+    environment:
+      - MCP_SERVER=http://mcp-server:9000
+      - MCP_CLIENT_ID=evolution-api
+      - MCP_CLIENT_TOKEN=token_seguro_evolution
+      - EVOLUTION_API_URL=https://sua-evolution-api.com
+      - EVOLUTION_API_KEY=sua_evolution_api_key
+    depends_on:
+      - mcp-server
+    networks:
+      - voice_internal
+
+  mcp-calendar:
+    build:
+      context: ./mcp-clients/calendar
+      dockerfile: Dockerfile
+    container_name: voiceai-mcp-calendar
+    restart: unless-stopped
+    volumes:
+      - ./mcp-clients/calendar:/app
+      - ./shared/calendar_data:/app/data
+    environment:
+      - MCP_SERVER=http://mcp-server:9000
+      - MCP_CLIENT_ID=calendar-sync
+      - MCP_CLIENT_TOKEN=token_seguro_calendar
+      - GOOGLE_CALENDAR_API_KEY=sua_api_key_google
+      - OFFICE365_CLIENT_ID=sua_client_id_office
+      - OFFICE365_CLIENT_SECRET=sua_client_secret_office
+    depends_on:
+      - mcp-server
+    networks:
+      - voice_internal
+
+  # Redis para cache e mensageria
+  redis:
+    image: redis:alpine
+    container_name: voiceai-redis
+    restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - voice_internal
+
+  # Banco de Dados MongoDB
+  mongodb:
+    image: mongo:5
+    container_name: voiceai-mongodb
+    restart: unless-stopped
+    volumes:
+      - ./data/mongodb:/data/db
+    networks:
+      - voice_internal
+
+  # Serviço Whisper STT
+  speech-to-text:
+    build:
+      context: ./stt
+      dockerfile: Dockerfile
+    container_name: voiceai-stt
+    restart: unless-stopped
+    volumes:
+      - ./stt/models:/models
+      - ./shared/audio_cache:/audio_cache
+    environment:
+      - MODEL=large-v2
+      - SAMPLE_RATE=16000
+      - LANGUAGE=pt
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - voice_internal
+
+  # Serviço LLM - Mistral ou Llama
+  language-model:
+    image: ghcr.io/huggingface/text-generation-inference:latest
+    container_name: voiceai-llm
+    restart: unless-stopped
+    volumes:
+      - ./llm/models:/data
+    environment:
+      - MODEL_ID=/data/mistral-7b-instruct-v0.2
+      - NUM_SHARD=1
+      - MAX_BATCH_SIZE=16
+      - MAX_INPUT_LENGTH=4096
+      - MAX_TOTAL_TOKENS=8192
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - voice_internal
+
+  # Serviço TTS - VITS ou similar
+  text-to-speech:
+    build:
+      context: ./tts
+      dockerfile: Dockerfile
+    container_name: voiceai-tts
+    restart: unless-stopped
+    volumes:
+      - ./tts/models:/models
+      - ./shared/tts_cache:/tts_cache
+    environment:
+      - SAMPLE_RATE=24000
+      - VOICE_MODELS=/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - voice_internal
+
+  # Servidor Asterisk para telefonia
+  asterisk:
+    build:
+      context: ./asterisk
+      dockerfile: Dockerfile
+    container_name: voiceai-asterisk
+    restart: unless-stopped
+    volumes:
+      - ./asterisk/config:/etc/asterisk
+      - ./asterisk/sounds:/var/lib/asterisk/sounds
+      - ./asterisk/spool:/var/spool/asterisk
+    ports:
+      - "5060:5060/udp"
+      - "5061:5061/udp"
+      - "5062:5062/udp"
+      - "10000-10100:10000-10100/udp"
+    environment:
+      - TZ=America/Sao_Paulo
+    networks:
+      - network_public
+      - voice_internal
+
+  # Processador de áudio para otimização
+  audio-processor:
+    build:
+      context: ./audio-processor
+      dockerfile: Dockerfile
+    container_name: voiceai-audio
+    restart: unless-stopped
+    volumes:
+      - ./shared/audio_cache:/audio
+    environment:
+      - SAMPLE_RATE=16000
+      - VAD_MODE=3
+    networks:
+      - voice_internal
+
+  # Monitoramento e logs
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: voiceai-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - ./data/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - voice_internal
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: voiceai-grafana
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/grafana:/etc/grafana
+      - ./data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=senha_segura_admin
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.voiceai-grafana.rule=Host(`monitor.voiceai.seudominio.com`)"
+      - "traefik.http.routers.voiceai-grafana.entrypoints=websecure"
+      - "traefik.http.routers.voiceai-grafana.tls=true"
+      - "traefik.http.routers.voiceai-grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.voiceai-grafana.loadbalancer.server.port=3000"
+    networks:
+      - network_public
+      - voice_internal
+
+Configuração Avançada do Asterisk com Múltiplos Troncos e Ramais
+Vamos configurar o Asterisk com os três troncos SIP solicitados e criar uma estrutura de ramais:
+
+ini
+; pjsip.conf - Configuração para múltiplos troncos Inphonex e ramais
+
+[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0:5060
+external_media_address=seu_ip_servidor
+external_signaling_address=seu_ip_servidor
+
+[transport-udp-1]
+type=transport
+protocol=udp
+bind=0.0.0.0:5061
+external_media_address=seu_ip_servidor
+external_signaling_address=seu_ip_servidor
+
+[transport-udp-2]
+type=transport
+protocol=udp
+bind=0.0.0.0:5062
+external_media_address=seu_ip_servidor
+external_signaling_address=seu_ip_servidor
+
+; ===== TRONCO 1 =====
+[inphonex-auth-1]
+type=auth
+auth_type=userpass
+username=6087490
+password=Gto241223seG
+
+[inphonex-aor-1]
+type=aor
+contact=sip:sip.inphonex.com
+max_contacts=1
+qualify_frequency=60
+
+[inphonex-endpoint-1]
+type=endpoint
+transport=transport-udp
+context=from-trunk-1
+disallow=all
+allow=ulaw
+allow=alaw
+aors=inphonex-aor-1
+auth=inphonex-auth-1
+direct_media=no
+dtmf_mode=rfc4733
+ice_support=no
+media_encryption=no
+from_domain=sip.inphonex.com
+send_rpid=yes
+rewrite_contact=yes
+rtp_timeout=30
+rtp_timeout_hold=300
+timers=yes
+language=pt_BR
+device_state_busy_at=1
+
+[inphonex-registration-1]
+type=registration
+transport=transport-udp
+outbound_auth=inphonex-auth-1
+server_uri=sip:sip.inphonex.com
+client_uri=sip:6087490@sip.inphonex.com
+retry_interval=60
+expiration=3600
+
+; ===== TRONCO 2 =====
+[inphonex-auth-2]
+type=auth
+auth_type=userpass
+username=6087491
+password=Gto241223seG
+
+[inphonex-aor-2]
+type=aor
+contact=sip:sip.inphonex.com
+max_contacts=1
+qualify_frequency=60
+
+[inphonex-endpoint-2]
+type=endpoint
+transport=transport-udp-1
+context=from-trunk-2
+disallow=all
+allow=ulaw
+allow=alaw
+aors=inphonex-aor-2
+auth=inphonex-auth-2
+direct_media=no
+dtmf_mode=rfc4733
+ice_support=no
+media_encryption=no
+from_domain=sip.inphonex.com
+send_rpid=yes
+rewrite_contact=yes
+rtp_timeout=30
+rtp_timeout_hold=300
+timers=yes
+language=pt_BR
+device_state_busy_at=1
+
+[inphonex-registration-2]
+type=registration
+transport=transport-udp-1
+outbound_auth=inphonex-auth-2
+server_uri=sip:sip.inphonex.com
+client_uri=sip:6087491@sip.inphonex.com
+retry_interval=60
+expiration=3600
+
+; ===== TRONCO 3 =====
+[inphonex-auth-3]
+type=auth
+auth_type=userpass
+username=6087492
+password=Gto241223seG
+
+[inphonex-aor-3]
+type=aor
+contact=sip:sip.inphonex.com
+max_contacts=1
+qualify_frequency=60
+
+[inphonex-endpoint-3]
+type=endpoint
+transport=transport-udp-2
+context=from-trunk-3
+disallow=all
+allow=ulaw
+allow=alaw
+aors=inphonex-aor-3
+auth=inphonex-auth-3
+direct_media=no
+dtmf_mode=rfc4733
+ice_support=no
+media_encryption=no
+from_domain=sip.inphonex.com
+send_rpid=yes
+rewrite_contact=yes
+rtp_timeout=30
+rtp_timeout_hold=300
+timers=yes
+language=pt_BR
+device_state_busy_at=1
+
+[inphonex-registration-3]
+type=registration
+transport=transport-udp-2
+outbound_auth=inphonex-auth-3
+server_uri=sip:sip.inphonex.com
+client_uri=sip:6087492@sip.inphonex.com
+retry_interval=60
+expiration=3600
+
+; ===== CONFIGURAÇÃO DE RAMAIS =====
+; Criar template de ramal
+[extension-template](!)
+type=endpoint
+context=from-internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=opus
+transport=transport-udp
+direct_media=no
+dtmf_mode=rfc4733
+language=pt_BR
+call_group=1
+pickup_group=1
+
+[extension-auth](!)
+type=auth
+auth_type=userpass
+
+[extension-aor](!)
+type=aor
+max_contacts=3
+qualify_frequency=30
+
+; Ramal 1000 - Administrador
+[1000](extension-template)
+auth=auth1000
+aors=1000
+callerid="Administrador" <1000>
+
+[auth1000](extension-auth)
+password=senha_segura_1000
+username=1000
+
+[1000](extension-aor)
+
+; Ramal 1001 - Operador 1
+[1001](extension-template)
+auth=auth1001
+aors=1001
+callerid="Operador 1" <1001>
+
+[auth1001](extension-auth)
+password=senha_segura_1001
+username=1001
+
+[1001](extension-aor)
+
+; Ramal 1002 - Operador 2
+[1002](extension-template)
+auth=auth1002
+aors=1002
+callerid="Operador 2" <1002>
+
+[auth1002](extension-auth)
+password=senha_segura_1002
+username=1002
+
+[1002](extension-aor)
+
+; Ramais do sistema (para o auto-atendimento IA)
+[2000](extension-template)
+auth=auth2000
+aors=2000
+callerid="IA Trunk 1" <2000>
+
+[auth2000](extension-auth)
+password=senha_segura_2000
+username=2000
+
+[2000](extension-aor)
+
+[2001](extension-template)
+auth=auth2001
+aors=2001
+callerid="IA Trunk 2" <2001>
+
+[auth2001](extension-auth)
+password=senha_segura_2001
+username=2001
+
+[2001](extension-aor)
+
+[2002](extension-template)
+auth=auth2002
+aors=2002
+callerid="IA Trunk 3" <2002>
+
+[auth2002](extension-auth)
+password=senha_segura_2002
+username=2002
+
+[2002](extension-aor)
+
+Plano de Discagem Aprimorado com Suporte a Ramais e Múltiplos Troncos
+Arquivo extensions.conf:
+
+ini
+[general]
+static=yes
+writeprotect=no
+clearglobalvars=no
+priorityjumping=no
+
+[globals]
+TRUNK_MCP_URL=http://mcp-server:9000/sip/event
+API_URL=http://api:3000/calls
+
+[from-trunk-1]
+exten => _X.,1,NoOp(Incoming call from ${CALLERID(num)} via Trunk 1)
+exten => _X.,n,Set(TRUNK_ID=1)
+exten => _X.,n,Set(CALL_ID=${UNIQUEID})
+exten => _X.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _X.,n,Answer()
+exten => _X.,n,Wait(1)
+exten => _X.,n,Stasis(voiceai,trunk1)
+exten => _X.,n,Hangup()
+
+[from-trunk-2]
+exten => _X.,1,NoOp(Incoming call from ${CALLERID(num)} via Trunk 2)
+exten => _X.,n,Set(TRUNK_ID=2)
+exten => _X.,n,Set(CALL_ID=${UNIQUEID})
+exten => _X.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _X.,n,Answer()
+exten => _X.,n,Wait(1)
+exten => _X.,n,Stasis(voiceai,trunk2)
+exten => _X.,n,Hangup()
+
+[from-trunk-3]
+exten => _X.,1,NoOp(Incoming call from ${CALLERID(num)} via Trunk 3)
+exten => _X.,n,Set(TRUNK_ID=3)
+exten => _X.,n,Set(CALL_ID=${UNIQUEID})
+exten => _X.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _X.,n,Answer()
+exten => _X.,n,Wait(1)
+exten => _X.,n,Stasis(voiceai,trunk3)
+exten => _X.,n,Hangup()
+
+[hangup-handler]
+exten => s,1,NoOp(Call ${CALL_ID} ended)
+exten => s,n,Set(URL=${API_URL}/${CALL_ID}/status)
+exten => s,n,Set(DATA=status=ended&trunk=${TRUNK_ID})
+exten => s,n,Curl(${URL},${DATA},b)
+exten => s,n,Set(URL=${TRUNK_MCP_URL})
+exten => s,n,Set(DATA=call_id=${CALL_ID}&status=ended&trunk=${TRUNK_ID})
+exten => s,n,Curl(${URL},${DATA},b)
+exten => s,n,Return()
+
+[from-internal]
+; Chamadas para outros ramais
+exten => _1XXX,1,NoOp(Chamada interna para o ramal ${EXTEN})
+exten => _1XXX,n,Dial(PJSIP/${EXTEN},30)
+exten => _1XXX,n,Hangup()
+
+; Chamadas para ramais IA
+exten => _2XXX,1,NoOp(Chamada para o sistema IA ${EXTEN})
+exten => _2XXX,n,Answer()
+exten => _2XXX,n,Wait(1)
+exten => _2XXX,n,Stasis(voiceai-monitor)
+exten => _2XXX,n,Hangup()
+
+; Discagem via Trunk 1 (padrão)
+exten => _9.,1,NoOp(Discando ${EXTEN:1} via Trunk 1)
+exten => _9.,n,Set(TRUNK_ID=1)
+exten => _9.,n,Set(CALL_ID=${UNIQUEID})
+exten => _9.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _9.,n,Dial(PJSIP/${EXTEN:1}@inphonex-endpoint-1,30)
+exten => _9.,n,Hangup()
+
+; Discagem via Trunk 2
+exten => _8.,1,NoOp(Discando ${EXTEN:1} via Trunk 2)
+exten => _8.,n,Set(TRUNK_ID=2)
+exten => _8.,n,Set(CALL_ID=${UNIQUEID})
+exten => _8.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _8.,n,Dial(PJSIP/${EXTEN:1}@inphonex-endpoint-2,30)
+exten => _8.,n,Hangup()
+
+; Discagem via Trunk 3
+exten => _7.,1,NoOp(Discando ${EXTEN:1} via Trunk 3)
+exten => _7.,n,Set(TRUNK_ID=3)
+exten => _7.,n,Set(CALL_ID=${UNIQUEID})
+exten => _7.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _7.,n,Dial(PJSIP/${EXTEN:1}@inphonex-endpoint-3,30)
+exten => _7.,n,Hangup()
+
+; Discagem externa com balanceamento automático (escolhe o tronco menos ocupado)
+exten => _0.,1,NoOp(Discando ${EXTEN:1} com balanceamento de tronco)
+exten => _0.,n,Set(TRUNK_CHECK_URL=${API_URL}/trunks/least-busy)
+exten => _0.,n,Set(TRUNK_ID=${SHELL(curl -s ${TRUNK_CHECK_URL})})
+exten => _0.,n,GotoIf($["${TRUNK_ID}" = "1"]?trunk1,1)
+exten => _0.,n,GotoIf($["${TRUNK_ID}" = "2"]?trunk2,1)
+exten => _0.,n,GotoIf($["${TRUNK_ID}" = "3"]?trunk3,1)
+exten => _0.,n,Goto(trunk1,1) ; Fallback para tronco 1 se ocorrer erro
+
+exten => trunk1,1,NoOp(Usando tronco 1 para ${EXTEN:1})
+exten => trunk1,n,Set(TRUNK_ID=1)
+exten => trunk1,n,Set(CALL_ID=${UNIQUEID})
+exten => trunk1,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => trunk1,n,Dial(PJSIP/${EXTEN:1}@inphonex-endpoint-1,30)
+exten => trunk1,n,Hangup()
+
+exten => trunk2,1,NoOp(Usando tronco 2 para ${EXTEN:1})
+exten => trunk2,n,Set(TRUNK_ID=2)
+exten => trunk2,n,Set(CALL_ID=${UNIQUEID})
+exten => trunk2,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => trunk2,n,Dial(PJSIP/${EXTEN:1}@inphonex-endpoint-2,30)
+exten => trunk2,n,Hangup()
+
+exten => trunk3,1,NoOp(Usando tronco 3 para ${EXTEN:1})
+exten => trunk3,n,Set(TRUNK_ID=3)
+exten => trunk3,n,Set(CALL_ID=${UNIQUEID})
+exten => trunk3,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => trunk3,n,Dial(PJSIP/${EXTEN:1}@inphonex-endpoint-3,30)
+exten => trunk3,n,Hangup()
+
+Implementação do MCP Server
+Vamos implementar a base do servidor MCP para gerenciar todas as integrações:
+
+javascript
+// mcp-server/index.js
+const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
+const mongoose = require('mongoose');
+const redis = require('redis');
+const { promisify } = require('util');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const morgan = require('morgan');
+const fs = require('fs');
+const path = require('path');
+
+// Configuração do ambiente
+require('dotenv').config();
+const PORT = process.env.PORT || 9000;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/voiceai_mcp';
+const REDIS_URI = process.env.REDIS_URI || 'redis://localhost:6379';
+
+// Inicializar app express
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+// Conectar ao MongoDB
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('Conectado ao MongoDB');
+}).catch(err => {
+  console.error('Erro ao conectar ao MongoDB:', err);
+  process.exit(1);
+});
+
+// Configurar cliente Redis
+const redisClient = redis.createClient(REDIS_URI);
+redisClient.on('error', (err) => console.error('Erro Redis:', err));
+redisClient.on('connect', () => console.log('Conectado ao Redis'));
+
+// Promisificar comandos Redis
+const getAsync = promisify(redisClient.get).bind(redisClient);
+const setAsync = promisify(redisClient.set).bind(redisClient);
+const publishAsync = promisify(redisClient.publish).bind(redisClient);
+
+// Middleware de logging
+const logDir = path.join(__dirname, 'logs');
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+const accessLogStream = fs.createWriteStream(path.join(logDir, 'access.log'), { flags: 'a' });
+
+// Configuração do Express
+app.use(cors());
+app.use(morgan('combined', { stream: accessLogStream }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Verificação de Autenticação
+const apiKeyAuth = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'] || req.query.api_key;
+  if (!apiKey || apiKey !== process.env.API_KEY) {
+    return res.status(401).json({ error: 'Acesso não autorizado' });
+  }
+  next();
+};
+
+// Registro de clientes MCP
+const registeredClients = {};
+
+// WebSocket - Conexão de clientes
+wss.on('connection', (ws, req) => {
+  console.log('Nova conexão WebSocket');
+  
+  let clientId = null;
+  
+  ws.on('message', async (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      // Autenticação do cliente
+      if (data.type === 'register') {
+        clientId = data.
+
+
+claude-3-7-sonnet-20250219
+Input
+40529 tokens
+Output
+8192 tokens
+Resp. Time
+102.01s
+Cost
+$0.244467
+The selected model is claude-3-7-sonnet-20250219 as it aligns with the complexity and task requirements. This model is adept at generating code for internet and telecom-related tasks, especially involving multiple servers, clients, and SIP trunks. Its capabilities in code generation and handling intricate systems make it a suitable choice for this task.
+
+Task Type:
+Code Generation
+Domain:
+Internet And Telecom
+Complexity:
+7
+Baseado no que foi feito, isole as partes anteriores do código que não serão usadas, crie um passo a passo bem detalhado desde o início com a implantação, ferramentas, dependências, tutoria dockerhub, etc. use o domínio: disparoseguro.shop e subdom´mios necessários trazendo lista documentada e criando a documentação da aplicação, crie login robusto e biletagem e regras de firewall, botão paypal e chave pix: <div id="paypal-button-container-P-2DS65966SJ741222HM7UCBNY"></div>
+
+<script src="https://www.paypal.com/sdk/js?client-id=AZI2sTv8bYOkmVRO73vBUXQwupNyLRDQRARKALCehF_fa9lZydHeIYPOZX6X6-c53-l9ZgygdCqA_XHr&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script> <script> paypal.Buttons({ style: { shape: 'pill', color: 'blue', layout: 'vertical', label: 'subscribe' }, createSubscription: function(data, actions) { return actions.subscription.create({ /* Creates the subscription */ plan_id: 'P-2DS65966SJ741222HM7UCBNY' }); }, onApprove: function(data, actions) { alert(data.subscriptionID); // You can add optional success … chave pix assas: ff576050-99a7-4158-b4ea-1eb0db3098ac crie uma API robusta ARCEE com bot para ajuda na experiência do cliente e se possível para uso com LLM de voz, roteando os melhores modelos
+Documentação do Sistema DisparoSeguro: Plataforma de IA para Automatização de Prospecção
+Sumário
+Visão Geral
+Arquitetura do Sistema
+Infraestrutura de Domínios
+Guia de Implantação
+Configuração de Segurança
+API ARCEE
+Sistema de Pagamentos
+Painel de Administração
+FAQ e Suporte
+Visão Geral
+DisparoSeguro é uma plataforma avançada de prospecção automatizada que utiliza IA para gerenciar chamadas telefônicas, integrações com WhatsApp e calendários, oferecendo uma solução completa para empresas que desejam otimizar seu processo de vendas e atendimento.
+
+Principais recursos:
+
+Chamadas automatizadas com vozes naturais de IA
+Múltiplos troncos SIP para escalabilidade
+Integração com WhatsApp Oficial e Evolution API
+Agendamento automático via integração com calendários
+Bot ARCEE para atendimento inteligente
+Análise de sentimento e relatórios detalhados
+Sistema de biletagem e cobrança automatizada
+Arquitetura do Sistema
+Diagrama de Arquitetura
+
+A plataforma utiliza uma arquitetura de microserviços baseada em Docker, com os seguintes componentes principais:
+
+Frontend: Interface web responsiva
+Backend API: Orquestrador principal
+ARCEE API: Sistema de IA conversacional
+MCP Server: Servidor de protocolo de mensagens
+Speech-to-Text: Serviço de reconhecimento de fala
+Text-to-Speech: Síntese de voz natural
+Asterisk: Sistema de telefonia VoIP
+MongoDB: Persistência de dados
+Redis: Cache e mensageria
+Grafana/Prometheus: Monitoramento
+Infraestrutura de Domínios
+Domínio Principal
+disparoseguro.shop: Site principal e landing page
+Subdomínios
+app.disparoseguro.shop: Aplicação principal
+api.disparoseguro.shop: API REST principal
+arcee.disparoseguro.shop: API ARCEE (IA conversacional)
+mcp.disparoseguro.shop: Servidor MCP
+monitor.disparoseguro.shop: Grafana (monitoramento)
+docs.disparoseguro.shop: Documentação da API
+admin.disparoseguro.shop: Painel administrativo
+Guia de Implantação
+Pré-requisitos
+Servidor Linux (Ubuntu 20.04 LTS recomendado)
+Docker 20.10+ e Docker Compose 2.0+
+Portainer e Traefik já configurados
+Acesso SSH ao servidor
+Conexão com Internet de alta velocidade
+Certificados SSL/TLS (Let's Encrypt)
+GPU NVIDIA (opcional, melhora desempenho dos modelos)
+Etapa 1: Configuração Inicial do Servidor
+bash
+# Acesse o servidor
+ssh usuario@seu-servidor
+
+# Crie a estrutura de diretórios
+mkdir -p /opt/disparoseguro/{frontend,backend,arcee,mcp-server,asterisk,llm,stt,tts}
+mkdir -p /opt/disparoseguro/data/{mongodb,redis,grafana,prometheus}
+mkdir -p /opt/disparoseguro/shared/{logs,uploads,audio_cache,tts_cache,mcp_data}
+mkdir -p /opt/disparoseguro/config/ssl
+mkdir -p /opt/disparoseguro/monitoring/{grafana,prometheus}
+
+# Configure permissões
+sudo chown -R $USER:$USER /opt/disparoseguro
+sudo chmod -R 755 /opt/disparoseguro
+
+# Navegue até o diretório principal
+cd /opt/disparoseguro
+
+Etapa 2: Clonar Repositório do Projeto
+bash
+# Clone o repositório principal
+git clone https://github.com/disparoseguro/platform.git .
+
+# Atualize submódulos (se existirem)
+git submodule update --init --recursive
+
+Etapa 3: Configurar Variáveis de Ambiente
+bash
+# Crie o arquivo .env principal
+cat > .env << 'EOF'
+# Configurações Gerais
+NODE_ENV=production
+TZ=America/Sao_Paulo
+
+# Domínios
+DOMAIN_MAIN=disparoseguro.shop
+DOMAIN_APP=app.disparoseguro.shop
+DOMAIN_API=api.disparoseguro.shop
+DOMAIN_ARCEE=arcee.disparoseguro.shop
+DOMAIN_MCP=mcp.disparoseguro.shop
+DOMAIN_MONITOR=monitor.disparoseguro.shop
+DOMAIN_DOCS=docs.disparoseguro.shop
+DOMAIN_ADMIN=admin.disparoseguro.shop
+
+# Banco de Dados
+MONGO_URI=mongodb://mongodb:27017/disparoseguro
+MONGO_USER=disparouser
+MONGO_PASSWORD=senha_segura_mongo
+REDIS_URI=redis://redis:6379
+
+# Segurança
+JWT_SECRET=chave_muito_secreta_e_complexa_para_jwt_tokens
+API_KEY=chave_api_muito_segura_para_uso_interno
+MCP_API_KEY=chave_api_segura_para_mcp
+ARCEE_API_KEY=chave_api_segura_para_arcee
+
+# Integrações
+WHATSAPP_BUSINESS_ID=seu_id_whatsapp_business
+WHATSAPP_ACCESS_TOKEN=seu_token_whatsapp_api
+EVOLUTION_API_URL=https://sua-evolution-api.com
+EVOLUTION_API_KEY=sua_evolution_api_key
+CALENDAR_API_KEY=sua_api_key_google_calendar
+
+# Pagamentos
+PAYPAL_CLIENT_ID=AZI2sTv8bYOkmVRO73vBUXQwupNyLRDQRARKALCehF_fa9lZydHeIYPOZX6X6-c53-l9ZgygdCqA_XHr
+PAYPAL_SECRET=seu_paypal_secret
+ASAAS_API_KEY=ff576050-99a7-4158-b4ea-1eb0db3098ac
+ASAAS_SANDBOX=false
+
+# SIP Trunks
+SIP_USERNAME_1=6087490
+SIP_PASSWORD_1=Gto241223seG
+SIP_USERNAME_2=6087491
+SIP_PASSWORD_2=Gto241223seG
+SIP_USERNAME_3=6087492
+SIP_PASSWORD_3=Gto241223seG
+SIP_DOMAIN=sip.inphonex.com
+
+# IA e Models
+STT_MODEL=large-v2
+LLM_MODEL=mistral-7b-instruct-v0.2
+TTS_MODEL=facebook/mms-tts-por
+EOF
+
+Etapa 4: Criar o Docker Compose
+bash
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+
+networks:
+  network_public:
+    external: true
+  disparo_internal:
+    driver: bridge
+
+services:
+  # Frontend Web
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: disparo-frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html
+      - ./config/ssl:/etc/nginx/ssl
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.disparo-frontend.rule=Host(`${DOMAIN_APP}`)"
+      - "traefik.http.routers.disparo-frontend.entrypoints=websecure"
+      - "traefik.http.routers.disparo-frontend.tls=true"
+      - "traefik.http.routers.disparo-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.disparo-frontend.loadbalancer.server.port=80"
+    networks:
+      - network_public
+      - disparo_internal
+
+  # Backend API
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: disparo-api
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+      - ./shared/logs:/app/logs
+      - ./shared/uploads:/app/uploads
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - TZ=${TZ}
+      - MONGO_URI=${MONGO_URI}
+      - REDIS_URI=${REDIS_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - API_KEY=${API_KEY}
+      - STT_SERVICE=http://speech-to-text:8000
+      - LLM_SERVICE=http://language-model:8080
+      - TTS_SERVICE=http://text-to-speech:5002
+      - SIP_SERVICE=http://asterisk:8088
+      - MCP_SERVICE=http://mcp-server:9000
+      - ARCEE_SERVICE=http://arcee:7000
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
+      - PAYPAL_SECRET=${PAYPAL_SECRET}
+      - ASAAS_API_KEY=${ASAAS_API_KEY}
+      - ASAAS_SANDBOX=${ASAAS_SANDBOX}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.disparo-api.rule=Host(`${DOMAIN_API}`)"
+      - "traefik.http.routers.disparo-api.entrypoints=websecure"
+      - "traefik.http.routers.disparo-api.tls=true"
+      - "traefik.http.routers.disparo-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.disparo-api.loadbalancer.server.port=3000"
+    depends_on:
+      - mongodb
+      - redis
+      - speech-to-text
+      - language-model
+      - text-to-speech
+      - asterisk
+      - mcp-server
+    networks:
+      - network_public
+      - disparo_internal
+
+  # ARCEE API (IA Conversacional Avançada)
+  arcee:
+    build:
+      context: ./arcee
+      dockerfile: Dockerfile
+    container_name: disparo-arcee
+    restart: unless-stopped
+    volumes:
+      - ./arcee:/app
+      - ./shared/logs:/app/logs
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - TZ=${TZ}
+      - MONGO_URI=${MONGO_URI}
+      - REDIS_URI=${REDIS_URI}
+      - API_KEY=${ARCEE_API_KEY}
+      - STT_SERVICE=http://speech-to-text:8000
+      - LLM_SERVICE=http://language-model:8080
+      - TTS_SERVICE=http://text-to-speech:5002
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.disparo-arcee.rule=Host(`${DOMAIN_ARCEE}`)"
+      - "traefik.http.routers.disparo-arcee.entrypoints=websecure"
+      - "traefik.http.routers.disparo-arcee.tls=true"
+      - "traefik.http.routers.disparo-arcee.tls.certresolver=letsencrypt"
+      - "traefik.http.services.disparo-arcee.loadbalancer.server.port=7000"
+    depends_on:
+      - mongodb
+      - redis
+      - speech-to-text
+      - language-model
+      - text-to-speech
+    networks:
+      - network_public
+      - disparo_internal
+
+  # MCP Server (Controle de Mensageria)
+  mcp-server:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: disparo-mcp
+    restart: unless-stopped
+    volumes:
+      - ./mcp-server:/app
+      - ./shared/mcp_data:/app/data
+      - ./shared/logs:/app/logs
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - TZ=${TZ}
+      - MONGO_URI=${MONGO_URI}
+      - REDIS_URI=${REDIS_URI}
+      - API_KEY=${MCP_API_KEY}
+      - WHATSAPP_BUSINESS_ID=${WHATSAPP_BUSINESS_ID}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - CALENDAR_API_KEY=${CALENDAR_API_KEY}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.disparo-mcp.rule=Host(`${DOMAIN_MCP}`)"
+      - "traefik.http.routers.disparo-mcp.entrypoints=websecure"
+      - "traefik.http.routers.disparo-mcp.tls=true"
+      - "traefik.http.routers.disparo-mcp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.disparo-mcp.loadbalancer.server.port=9000"
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - network_public
+      - disparo_internal
+
+  # Banco de Dados MongoDB
+  mongodb:
+    image: mongo:5
+    container_name: disparo-mongodb
+    restart: unless-stopped
+    volumes:
+      - ./data/mongodb:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    networks:
+      - disparo_internal
+
+  # Redis (Cache e Mensageria)
+  redis:
+    image: redis:alpine
+    container_name: disparo-redis
+    restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    networks:
+      - disparo_internal
+
+  # Serviço Speech-to-Text (Whisper)
+  speech-to-text:
+    build:
+      context: ./stt
+      dockerfile: Dockerfile
+    container_name: disparo-stt
+    restart: unless-stopped
+    volumes:
+      - ./stt/models:/models
+      - ./shared/audio_cache:/audio_cache
+    environment:
+      - MODEL=${STT_MODEL}
+      - SAMPLE_RATE=16000
+      - LANGUAGE=pt
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - disparo_internal
+
+  # Serviço Language Model (LLM)
+  language-model:
+    image: ghcr.io/huggingface/text-generation-inference:latest
+    container_name: disparo-llm
+    restart: unless-stopped
+    volumes:
+      - ./llm/models:/data
+    environment:
+      - MODEL_ID=/data/${LLM_MODEL}
+      - NUM_SHARD=1
+      - MAX_BATCH_SIZE=16
+      - MAX_INPUT_LENGTH=4096
+      - MAX_TOTAL_TOKENS=8192
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - disparo_internal
+
+  # Serviço Text-to-Speech (TTS)
+  text-to-speech:
+    build:
+      context: ./tts
+      dockerfile: Dockerfile
+    container_name: disparo-tts
+    restart: unless-stopped
+    volumes:
+      - ./tts/models:/models
+      - ./shared/tts_cache:/tts_cache
+    environment:
+      - MODEL=${TTS_MODEL}
+      - SAMPLE_RATE=24000
+      - VOICE_MODELS=/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - disparo_internal
+
+  # Servidor Asterisk para telefonia
+  asterisk:
+    build:
+      context: ./asterisk
+      dockerfile: Dockerfile
+    container_name: disparo-asterisk
+    restart: unless-stopped
+    volumes:
+      - ./asterisk/config:/etc/asterisk
+      - ./asterisk/sounds:/var/lib/asterisk/sounds
+      - ./asterisk/spool:/var/spool/asterisk
+    ports:
+      - "5060:5060/udp"
+      - "5061:5061/udp"
+      - "5062:5062/udp"
+      - "10000-10100:10000-10100/udp"
+    environment:
+      - TZ=${TZ}
+      - SIP_USERNAME_1=${SIP_USERNAME_1}
+      - SIP_PASSWORD_1=${SIP_PASSWORD_1}
+      - SIP_USERNAME_2=${SIP_USERNAME_2}
+      - SIP_PASSWORD_2=${SIP_PASSWORD_2}
+      - SIP_USERNAME_3=${SIP_USERNAME_3}
+      - SIP_PASSWORD_3=${SIP_PASSWORD_3}
+      - SIP_DOMAIN=${SIP_DOMAIN}
+    networks:
+      - network_public
+      - disparo_internal
+
+  # Documentação API
+  docs:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+    container_name: disparo-docs
+    restart: unless-stopped
+    volumes:
+      - ./docs:/app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.disparo-docs.rule=Host(`${DOMAIN_DOCS}`)"
+      - "traefik.http.routers.disparo-docs.entrypoints=websecure"
+      - "traefik.http.routers.disparo-docs.tls=true"
+      - "traefik.http.routers.disparo-docs.tls.certresolver=letsencrypt"
+      - "traefik.http.services.disparo-docs.loadbalancer.server.port=80"
+    networks:
+      - network_public
+      - disparo_internal
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: disparo-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - ./data/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - disparo_internal
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: disparo-grafana
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/grafana:/etc/grafana
+      - ./data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=senha_segura_admin
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.disparo-grafana.rule=Host(`${DOMAIN_MONITOR}`)"
+      - "traefik.http.routers.disparo-grafana.entrypoints=websecure"
+      - "traefik.http.routers.disparo-grafana.tls=true"
+      - "traefik.http.routers.disparo-grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.disparo-grafana.loadbalancer.server.port=3000"
+    networks:
+      - network_public
+      - disparo_internal
+EOF
+
+Etapa 5: Configurar Asterisk
+Crie a configuração do PJSIP para os troncos SIP:
+
+bash
+mkdir -p ./asterisk/config/
+cat > ./asterisk/config/pjsip.conf << 'EOF'
+[transport-udp]
+type=transport
+protocol=udp
+bind=0.0.0.0:5060
+external_media_address=seu_ip_servidor
+external_signaling_address=seu_ip_servidor
+
+[transport-udp-1]
+type=transport
+protocol=udp
+bind=0.0.0.0:5061
+external_media_address=seu_ip_servidor
+external_signaling_address=seu_ip_servidor
+
+[transport-udp-2]
+type=transport
+protocol=udp
+bind=0.0.0.0:5062
+external_media_address=seu_ip_servidor
+external_signaling_address=seu_ip_servidor
+
+; ===== TRONCO 1 =====
+[inphonex-auth-1]
+type=auth
+auth_type=userpass
+username=${SIP_USERNAME_1}
+password=${SIP_PASSWORD_1}
+
+[inphonex-aor-1]
+type=aor
+contact=sip:${SIP_DOMAIN}
+max_contacts=1
+qualify_frequency=60
+
+[inphonex-endpoint-1]
+type=endpoint
+transport=transport-udp
+context=from-trunk-1
+disallow=all
+allow=ulaw
+allow=alaw
+aors=inphonex-aor-1
+auth=inphonex-auth-1
+direct_media=no
+dtmf_mode=rfc4733
+ice_support=no
+media_encryption=no
+from_domain=${SIP_DOMAIN}
+send_rpid=yes
+rewrite_contact=yes
+rtp_timeout=30
+rtp_timeout_hold=300
+timers=yes
+language=pt_BR
+device_state_busy_at=1
+
+[inphonex-registration-1]
+type=registration
+transport=transport-udp
+outbound_auth=inphonex-auth-1
+server_uri=sip:${SIP_DOMAIN}
+client_uri=sip:${SIP_USERNAME_1}@${SIP_DOMAIN}
+retry_interval=60
+expiration=3600
+
+; ===== TRONCO 2 =====
+[inphonex-auth-2]
+type=auth
+auth_type=userpass
+username=${SIP_USERNAME_2}
+password=${SIP_PASSWORD_2}
+
+[inphonex-aor-2]
+type=aor
+contact=sip:${SIP_DOMAIN}
+max_contacts=1
+qualify_frequency=60
+
+[inphonex-endpoint-2]
+type=endpoint
+transport=transport-udp-1
+context=from-trunk-2
+disallow=all
+allow=ulaw
+allow=alaw
+aors=inphonex-aor-2
+auth=inphonex-auth-2
+direct_media=no
+dtmf_mode=rfc4733
+ice_support=no
+media_encryption=no
+from_domain=${SIP_DOMAIN}
+send_rpid=yes
+rewrite_contact=yes
+rtp_timeout=30
+rtp_timeout_hold=300
+timers=yes
+language=pt_BR
+device_state_busy_at=1
+
+[inphonex-registration-2]
+type=registration
+transport=transport-udp-1
+outbound_auth=inphonex-auth-2
+server_uri=sip:${SIP_DOMAIN}
+client_uri=sip:${SIP_USERNAME_2}@${SIP_DOMAIN}
+retry_interval=60
+expiration=3600
+
+; ===== TRONCO 3 =====
+[inphonex-auth-3]
+type=auth
+auth_type=userpass
+username=${SIP_USERNAME_3}
+password=${SIP_PASSWORD_3}
+
+[inphonex-aor-3]
+type=aor
+contact=sip:${SIP_DOMAIN}
+max_contacts=1
+qualify_frequency=60
+
+[inphonex-endpoint-3]
+type=endpoint
+transport=transport-udp-2
+context=from-trunk-3
+disallow=all
+allow=ulaw
+allow=alaw
+aors=inphonex-aor-3
+auth=inphonex-auth-3
+direct_media=no
+dtmf_mode=rfc4733
+ice_support=no
+media_encryption=no
+from_domain=${SIP_DOMAIN}
+send_rpid=yes
+rewrite_contact=yes
+rtp_timeout=30
+rtp_timeout_hold=300
+timers=yes
+language=pt_BR
+device_state_busy_at=1
+
+[inphonex-registration-3]
+type=registration
+transport=transport-udp-2
+outbound_auth=inphonex-auth-3
+server_uri=sip:${SIP_DOMAIN}
+client_uri=sip:${SIP_USERNAME_3}@${SIP_DOMAIN}
+retry_interval=60
+expiration=3600
+
+; ===== CONFIGURAÇÃO DE RAMAIS =====
+; Criar template de ramal
+[extension-template](!)
+type=endpoint
+context=from-internal
+disallow=all
+allow=ulaw
+allow=alaw
+allow=opus
+transport=transport-udp
+direct_media=no
+dtmf_mode=rfc4733
+language=pt_BR
+call_group=1
+pickup_group=1
+
+[extension-auth](!)
+type=auth
+auth_type=userpass
+
+[extension-aor](!)
+type=aor
+max_contacts=3
+qualify_frequency=30
+
+; Ramal 1000 - Administrador
+[1000](extension-template)
+auth=auth1000
+aors=1000
+callerid="Administrador" <1000>
+
+[auth1000](extension-auth)
+password=senha_segura_1000
+username=1000
+
+[1000](extension-aor)
+
+; Ramais do sistema para a IA
+[2000](extension-template)
+auth=auth2000
+aors=2000
+callerid="IA Trunk 1" <2000>
+
+[auth2000](extension-auth)
+password=senha_segura_2000
+username=2000
+
+[2000](extension-aor)
+
+[2001](extension-template)
+auth=auth2001
+aors=2001
+callerid="IA Trunk 2" <2001>
+
+[auth2001](extension-auth)
+password=senha_segura_2001
+username=2001
+
+[2001](extension-aor)
+
+[2002](extension-template)
+auth=auth2002
+aors=2002
+callerid="IA Trunk 3" <2002>
+
+[auth2002](extension-auth)
+password=senha_segura_2002
+username=2002
+
+[2002](extension-aor)
+EOF
+
+Crie o plano de discagem:
+
+bash
+cat > ./asterisk/config/extensions.conf << 'EOF'
+[general]
+static=yes
+writeprotect=no
+clearglobalvars=no
+priorityjumping=no
+
+[globals]
+API_URL=http://api:3000/calls
+MCP_URL=http://mcp-server:9000/calls
+
+[from-trunk-1]
+exten => _X.,1,NoOp(Incoming call from ${CALLERID(num)} via Trunk 1)
+exten => _X.,n,Set(TRUNK_ID=1)
+exten => _X.,n,Set(CALL_ID=${UNIQUEID})
+exten => _X.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _X.,n,Answer()
+exten => _X.,n,Wait(1)
+exten => _X.,n,Stasis(voiceai,trunk1)
+exten => _X.,n,Hangup()
+
+[from-trunk-2]
+exten => _X.,1,NoOp(Incoming call from ${CALLERID(num)} via Trunk 2)
+exten => _X.,n,Set(TRUNK_ID=2)
+exten => _X.,n,Set(CALL_ID=${UNIQUEID})
+exten => _X.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _X.,n,Answer()
+exten => _X.,n,Wait(1)
+exten => _X.,n,Stasis(voiceai,trunk2)
+exten => _X.,n,Hangup()
+
+[from-trunk-3]
+exten => _X.,1,NoOp(Incoming call from ${CALLERID(num)} via Trunk 3)
+exten => _X.,n,Set(TRUNK_ID=3)
+exten => _X.,n,Set(CALL_ID=${UNIQUEID})
+exten => _X.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _X.,n,Answer()
+exten => _X.,n,Wait(1)
+exten => _X.,n,Stasis(voiceai,trunk3)
+exten => _X.,n,Hangup()
+
+[hangup-handler]
+exten => s,1,NoOp(Call ${CALL_ID} ended)
+exten => s,n,Set(URL=${API_URL}/${CALL_ID}/status)
+exten => s,n,Set(DATA=status=ended&trunk=${TRUNK_ID})
+exten => s,n,Curl(${URL},${DATA},b)
+exten => s,n,Set(URL=${MCP_URL}/event)
+exten => s,n,Set(DATA=call_id=${CALL_ID}&status=ended&trunk=${TRUNK_ID})
+exten => s,n,Curl(${URL},${DATA},b)
+exten => s,n,Return()
+
+[from-internal]
+; Chamadas para outros ramais
+exten => _1XXX,1,NoOp(Chamada interna para o ramal ${EXTEN})
+exten => _1XXX,n,Dial(PJSIP/${EXTEN},30)
+exten => _1XXX,n,Hangup()
+
+; Chamadas para ramais IA
+exten => _2XXX,1,NoOp(Chamada para o sistema IA ${EXTEN})
+exten => _2XXX,n,Answer()
+exten => _2XXX,n,Wait(1)
+exten => _2XXX,n,Stasis(voiceai-monitor)
+exten => _2XXX,n,Hangup()
+
+; Discagem via Trunk 1 (padrão)
+exten => _9.,1,NoOp(Discando ${EXTEN:1} via Trunk 1)
+exten => _9.,n,Set(TRUNK_ID=1)
+exten => _9.,n,Set(CALL_ID=${UNIQUEID})
+exten => _9.,n,Set(CHANNEL(hangup_handler_push)=hangup-handler,s,1)
+exten => _9.,n,Dial(PJSIP/${EXTEN:1}@inphonex-endpoint-1,30)
+exten => _9.,n,Hangup()
+
+; Discagem via Trunk 2
+exten => _8.,1,NoOp(Discando ${EXTEN:1} via Trunk 2)
+exten => _8.,n,Set(TRUNK_ID=2)
+exten => _8.,n,Set(CALL_ID=${UNIQUEID})
+exten => _8.,n,Set(CHANNEL(hangup_handler_
