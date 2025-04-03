@@ -1,135 +1,247 @@
 /**
- * VoiceAI - Main Application
- * Enterprise Voice Prospecting Platform
+ * VoiceAI Platform - Main Application Class
  */
-
-// Global application state
-const AppState = {
-  currentView: 'dashboard',
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  notifications: [],
-  isSidebarCollapsed: false
-};
-
-// Main application class
 class VoiceAIApp {
   constructor() {
-    this.store = createStore(rootReducer);
-    this.socket = null;
-    this.apiService = new ApiService();
-    this.components = {
-      dashboard: new DashboardComponent(this),
-      conversations: new ConversationsComponent(this),
-      leadManagement: new LeadManagementComponent(this),
-      analytics: new AnalyticsComponent(this),
-      flowBuilder: new FlowBuilderComponent(this),
-      settings: new SettingsComponent(this)
+    // Create a store for state management
+    this.store = createStore((state = {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      token: localStorage.getItem('token'),
+      currentView: 'dashboard',
+      conversations: [],
+      leads: [],
+      campaigns: [],
+      settings: null,
+      notifications: [],
+      error: null
+    }, action) => {
+      switch (action.type) {
+        case 'SET_USER':
+          return { ...state, user: action.payload, isAuthenticated: !!action.payload };
+        case 'SET_TOKEN':
+          return { ...state, token: action.payload };
+        case 'SET_LOADING':
+          return { ...state, isLoading: action.payload };
+        case 'SET_CURRENT_VIEW':
+          return { ...state, currentView: action.payload };
+        case 'SET_CONVERSATIONS':
+          return { ...state, conversations: action.payload };
+        case 'SET_LEADS':
+          return { ...state, leads: action.payload };
+        case 'SET_CAMPAIGNS':
+          return { ...state, campaigns: action.payload };
+        case 'SET_SETTINGS':
+          return { ...state, settings: action.payload };
+        case 'ADD_NOTIFICATION':
+          return { ...state, notifications: [...state.notifications, action.payload] };
+        case 'REMOVE_NOTIFICATION':
+          return { ...state, notifications: state.notifications.filter(n => n.id !== action.payload) };
+        case 'SET_ERROR':
+          return { ...state, error: action.payload };
+        case 'LOGOUT':
+          return {
+            ...state,
+            user: null,
+            isAuthenticated: false,
+            token: null,
+            currentView: 'dashboard'
+          };
+        default:
+          return state;
+      }
+    });
+    
+    // API service
+    this.apiService = {
+      baseUrl: '/api',
+      
+      async request(method, url, data = null, options = {}) {
+        const token = this.app.store.getState().token;
+        
+        const fetchOptions = {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          }
+        };
+        
+        if (token) {
+          fetchOptions.headers.Authorization = `Bearer ${token}`;
+        }
+        
+        if (data && method !== 'GET') {
+          fetchOptions.body = JSON.stringify(data);
+        }
+        
+        try {
+          const response = await fetch(`${this.baseUrl}${url}`, fetchOptions);
+          
+          // Check if response is JSON
+          const contentType = response.headers.get('Content-Type');
+          
+          if (contentType && contentType.includes('application/json')) {
+            const jsonResponse = await response.json();
+            
+            if (!response.ok) {
+              throw {
+                status: response.status,
+                message: jsonResponse.message || 'An error occurred',
+                data: jsonResponse
+              };
+            }
+            
+            return jsonResponse;
+          } else if (options.responseType === 'blob') {
+            return await response.blob();
+          } else {
+            return await response.text();
+          }
+        } catch (error) {
+          console.error(`API Error (${method} ${url}):`, error);
+          
+          // Dispatch error
+          this.app.store.dispatch({
+            type: 'SET_ERROR',
+            payload: {
+              message: error.message || 'An error occurred',
+              status: error.status || 500
+            }
+          });
+          
+          throw error;
+        }
+      },
+      
+      // HTTP methods
+      async get(url, options = {}) {
+        return this.request('GET', url, null, options);
+      },
+      
+      async post(url, data, options = {}) {
+        return this.request('POST', url, data, options);
+      },
+      
+      async put(url, data, options = {}) {
+        return this.request('PUT', url, data, options);
+      },
+      
+      async delete(url, options = {}) {
+        return this.request('DELETE', url, null, options);
+      }
     };
     
-    // Subscribe to store changes
-    this.store.subscribe(() => this.render());
+    // Set app reference in API service
+    this.apiService.app = this;
+    
+    // Components
+    this.components = {
+      dashboard: null,
+      conversations: null,
+      leadManagement: null,
+      analytics: null,
+      flowBuilder: null,
+      settings: null
+    };
+    
+    // Bind methods
+    this.render = this.render.bind(this);
+    this.handleLogin = this.handleLogin.bind(this);
+    this.handleLogout = this.handleLogout.bind(this);
+    
+    // Subscribe to store changes to re-render
+    this.store.subscribe(this.render);
   }
   
   /**
    * Initialize the application
    */
   async init() {
-    try {
-      // Check authentication status
-      const token = localStorage.getItem('voiceai_token');
-      
-      if (token) {
-        // Set token in API service
-        this.apiService.setAuthToken(token);
+    // Initialize the UI
+    this.render();
+    
+    // Check if user is authenticated
+    const token = this.store.getState().token;
+    if (token) {
+      try {
+        this.store.dispatch({ type: 'SET_LOADING', payload: true });
         
-        // Fetch user data
-        const userData = await this.apiService.get('/api/auth/me');
+        // Fetch current user info
+        const user = await this.apiService.get('/auth/me');
         
-        this.store.dispatch({
-          type: 'SET_USER',
-          payload: userData
-        });
-        
-        this.store.dispatch({
-          type: 'SET_AUTHENTICATED',
-          payload: true
-        });
+        this.store.dispatch({ type: 'SET_USER', payload: user });
         
         // Initialize WebSocket connection
         this.initializeSocket(token);
+        
+        // Initialize components
+        this.initializeComponents();
+      } catch (error) {
+        console.error('Auth error:', error);
+        
+        // Clear token if invalid
+        localStorage.removeItem('token');
+        this.store.dispatch({ type: 'SET_TOKEN', payload: null });
+      } finally {
+        this.store.dispatch({ type: 'SET_LOADING', payload: false });
       }
-      
-      // Initialize event listeners
-      this.initEventListeners();
-      
-      // Set loading to false
-      this.store.dispatch({
-        type: 'SET_LOADING',
-        payload: false
-      });
-      
-      // Render initial view
-      this.render();
-    } catch (error) {
-      console.error('Initialization error:', error);
-      
-      // Clear any invalid tokens
-      if (error.response && error.response.status === 401) {
-        localStorage.removeItem('voiceai_token');
-      }
-      
-      this.store.dispatch({
-        type: 'SET_LOADING',
-        payload: false
-      });
-      
-      this.renderLoginView();
     }
+    
+    // Setup event listeners
+    this.initEventListeners();
   }
   
   /**
    * Initialize WebSocket connection
    */
   initializeSocket(token) {
-    this.socket = new SocketService(token);
+    if (!token) return;
     
-    // Set up socket event handlers
-    this.socket.on('connect', () => {
-      console.log('Socket connected');
-    });
+    this.socketService = new SocketService(token);
     
-    this.socket.on('notification', (data) => {
+    // Handle incoming call notification
+    this.socketService.on('incoming_call', this.handleIncomingCall.bind(this));
+    
+    // Handle new message notification
+    this.socketService.on('new_message', (data) => {
       this.store.dispatch({
         type: 'ADD_NOTIFICATION',
-        payload: data
+        payload: {
+          id: Date.now(),
+          type: 'message',
+          title: 'New Message',
+          message: `New message from ${data.sender}`,
+          data: data
+        }
       });
+      
+      // Update conversations if needed
+      if (this.store.getState().currentView === 'conversations') {
+        // Refresh conversations list
+        this.components.conversations?.fetchConversations();
+      }
     });
     
-    this.socket.on('call_incoming', (data) => {
-      this.handleIncomingCall(data);
-    });
-    
-    this.socket.on('call_status_changed', (data) => {
+    // Handle lead assignment notification
+    this.socketService.on('lead_assigned', (data) => {
       this.store.dispatch({
-        type: 'UPDATE_CALL_STATUS',
-        payload: data
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: Date.now(),
+          type: 'lead',
+          title: 'Lead Assigned',
+          message: `New lead assigned: ${data.leadName}`,
+          data: data
+        }
       });
-    });
-    
-    this.socket.on('lead_updated', (data) => {
-      this.store.dispatch({
-        type: 'UPDATE_LEAD',
-        payload: data
-      });
-    });
-    
-    this.socket.on('conversation_updated', (data) => {
-      this.store.dispatch({
-        type: 'UPDATE_CONVERSATION',
-        payload: data
-      });
+      
+      // Update leads if needed
+      if (this.store.getState().currentView === 'leadManagement') {
+        // Refresh leads list
+        this.components.leadManagement?.fetchLeads();
+      }
     });
   }
   
@@ -137,77 +249,143 @@ class VoiceAIApp {
    * Handle incoming call notification
    */
   handleIncomingCall(data) {
-    // Create call notification
-    const notification = {
-      id: Date.now(),
-      type: 'call',
-      title: 'Incoming Call',
-      message: `Incoming call from ${data.caller}`,
-      data: data,
-      timestamp: new Date(),
-      read: false
-    };
-    
+    // Show notification
     this.store.dispatch({
       type: 'ADD_NOTIFICATION',
-      payload: notification
+      payload: {
+        id: Date.now(),
+        type: 'call',
+        title: 'Incoming Call',
+        message: `Incoming call from ${data.callerName || data.phoneNumber}`,
+        data: data
+      }
     });
     
-    // Play sound for incoming call
-    const audio = new Audio('https://cdn.freesound.org/previews/415/415346_7607624-lq.mp3');
-    audio.play();
+    // Show incoming call UI
+    // TODO: Implement incoming call UI
     
-    // Show browser notification if possible
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('VoiceAI - Incoming Call', {
-        body: `Call from ${data.caller}`,
-        icon: 'https://via.placeholder.com/128'
-      });
-    }
+    // Play ringtone
+    const ringtone = new Audio('/audio/ringtone.mp3');
+    ringtone.loop = true;
+    ringtone.play().catch(e => console.error('Error playing ringtone:', e));
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal" id="incoming-call-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">Incoming Call</h3>
+          <button class="modal-close" id="call-reject">
+            <i data-feather="x"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="incoming-call-container">
+            <div class="caller-avatar">
+              <i data-feather="user" style="width: 48px; height: 48px;"></i>
+            </div>
+            <div class="caller-info">
+              <div class="caller-name">${data.callerName || 'Unknown Caller'}</div>
+              <div class="caller-number">${data.phoneNumber || ''}</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-danger" id="call-reject-btn">
+            <i data-feather="phone-off"></i>
+            Reject
+          </button>
+          <button class="btn btn-success" id="call-accept-btn">
+            <i data-feather="phone"></i>
+            Accept
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Initialize feather icons
+    feather.replace();
+    
+    // Handle call actions
+    document.getElementById('call-reject-btn')?.addEventListener('click', () => {
+      ringtone.pause();
+      modal.remove();
+      
+      // Reject call via API
+      this.apiService.post(`/calls/${data.callId}/reject`);
+    });
+    
+    document.getElementById('call-accept-btn')?.addEventListener('click', () => {
+      ringtone.pause();
+      modal.remove();
+      
+      // Accept call via API
+      this.apiService.post(`/calls/${data.callId}/accept`);
+      
+      // Navigate to conversation view
+      this.store.dispatch({ type: 'SET_CURRENT_VIEW', payload: 'conversations' });
+      
+      // TODO: Open specific conversation
+    });
+    
+    document.getElementById('call-reject')?.addEventListener('click', () => {
+      ringtone.pause();
+      modal.remove();
+      
+      // Reject call via API
+      this.apiService.post(`/calls/${data.callId}/reject`);
+    });
+  }
+  
+  /**
+   * Initialize components
+   */
+  initializeComponents() {
+    // Initialize all components
+    this.components.dashboard = new DashboardComponent(this);
+    this.components.conversations = new ConversationsComponent(this);
+    this.components.leadManagement = new LeadManagementComponent(this);
+    this.components.analytics = new AnalyticsComponent(this);
+    this.components.flowBuilder = new FlowBuilderComponent(this);
+    this.components.settings = new SettingsComponent(this);
   }
   
   /**
    * Initialize application event listeners
    */
   initEventListeners() {
-    // Navigation event handling
-    document.addEventListener('click', (e) => {
-      // Handle navigation clicks
-      if (e.target.matches('[data-nav]') || e.target.closest('[data-nav]')) {
-        const navItem = e.target.matches('[data-nav]') ? 
-                        e.target : 
-                        e.target.closest('[data-nav]');
-        
-        const view = navItem.dataset.nav;
-        
-        this.store.dispatch({
-          type: 'SET_CURRENT_VIEW',
-          payload: view
-        });
-        
+    // Login form submission
+    document.addEventListener('submit', (e) => {
+      if (e.target.id === 'login-form') {
         e.preventDefault();
-      }
-      
-      // Handle logout click
-      if (e.target.matches('[data-logout]') || e.target.closest('[data-logout]')) {
-        this.handleLogout();
-        e.preventDefault();
-      }
-      
-      // Handle toggle sidebar
-      if (e.target.matches('[data-toggle-sidebar]') || e.target.closest('[data-toggle-sidebar]')) {
-        this.store.dispatch({
-          type: 'TOGGLE_SIDEBAR'
-        });
-        e.preventDefault();
+        this.handleLogin(e);
       }
     });
     
-    // Form submission handling
-    document.addEventListener('submit', (e) => {
-      // Handle login form
-      if (e.target.matches('#login-form')) {
-        this.handleLogin(e);
+    // Navigation click events
+    document.addEventListener('click', (e) => {
+      // Handle navigation item clicks
+      if (e.target.closest('.nav-item')) {
+        const navItem = e.target.closest('.nav-item');
+        const view = navItem.dataset.view;
+        
+        if (view) {
+          this.store.dispatch({ type: 'SET_CURRENT_VIEW', payload: view });
+        }
+      }
+      
+      // Handle logout button click
+      if (e.target.closest('#logout-btn')) {
+        this.handleLogout();
+      }
+      
+      // Handle notification dismiss
+      if (e.target.closest('.notification-dismiss')) {
+        const notificationId = e.target.closest('.notification-item').dataset.id;
+        this.store.dispatch({ type: 'REMOVE_NOTIFICATION', payload: parseInt(notificationId) });
       }
     });
   }
@@ -216,48 +394,40 @@ class VoiceAIApp {
    * Handle user login
    */
   async handleLogin(e) {
-    e.preventDefault();
+    const form = e.target;
+    const email = form.querySelector('#email').value;
+    const password = form.querySelector('#password').value;
     
-    const email = document.querySelector('#email').value;
-    const password = document.querySelector('#password').value;
+    if (!email || !password) {
+      return;
+    }
     
     try {
-      const response = await this.apiService.post('/api/auth/login', {
-        email,
-        password
-      });
+      this.store.dispatch({ type: 'SET_LOADING', payload: true });
       
-      // Store token
-      localStorage.setItem('voiceai_token', response.token);
+      const response = await this.apiService.post('/auth/login', { email, password });
       
-      // Set token in API service
-      this.apiService.setAuthToken(response.token);
+      // Save token to localStorage and store
+      localStorage.setItem('token', response.token);
+      this.store.dispatch({ type: 'SET_TOKEN', payload: response.token });
+      this.store.dispatch({ type: 'SET_USER', payload: response.user });
       
-      // Update store
-      this.store.dispatch({
-        type: 'SET_USER',
-        payload: response.user
-      });
-      
-      this.store.dispatch({
-        type: 'SET_AUTHENTICATED',
-        payload: true
-      });
-      
-      // Initialize socket
+      // Initialize WebSocket connection
       this.initializeSocket(response.token);
       
-      // Render app
-      this.render();
+      // Initialize components
+      this.initializeComponents();
     } catch (error) {
       console.error('Login error:', error);
       
       // Show error message
-      const errorContainer = document.querySelector('#login-error');
-      if (errorContainer) {
-        errorContainer.textContent = error.response?.data?.message || 'Invalid credentials';
-        errorContainer.style.display = 'block';
+      const errorElement = form.querySelector('.login-error');
+      if (errorElement) {
+        errorElement.textContent = error.message || 'Invalid email or password';
+        errorElement.style.display = 'block';
       }
+    } finally {
+      this.store.dispatch({ type: 'SET_LOADING', payload: false });
     }
   }
   
@@ -265,28 +435,16 @@ class VoiceAIApp {
    * Handle user logout
    */
   handleLogout() {
-    // Clear token
-    localStorage.removeItem('voiceai_token');
+    // Clear token from localStorage and store
+    localStorage.removeItem('token');
     
-    // Disconnect socket
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
+    // Disconnect WebSocket
+    if (this.socketService) {
+      this.socketService.disconnect();
     }
     
-    // Update store
-    this.store.dispatch({
-      type: 'SET_USER',
-      payload: null
-    });
-    
-    this.store.dispatch({
-      type: 'SET_AUTHENTICATED',
-      payload: false
-    });
-    
-    // Render login view
-    this.renderLoginView();
+    // Dispatch logout action
+    this.store.dispatch({ type: 'LOGOUT' });
   }
   
   /**
@@ -294,49 +452,63 @@ class VoiceAIApp {
    */
   render() {
     const state = this.store.getState();
+    const appContainer = document.getElementById('app');
     
+    // Show loading spinner if loading
     if (state.isLoading) {
-      return; // Don't render during loading
+      appContainer.innerHTML = `
+        <div class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      `;
+      return;
     }
     
+    // Render login view if not authenticated
     if (!state.isAuthenticated) {
-      this.renderLoginView();
+      this.renderLoginView(appContainer);
       return;
     }
     
     // Render authenticated view
-    this.renderAuthenticatedView();
+    this.renderAuthenticatedView(appContainer);
+    
+    // Initialize feather icons
+    feather.replace();
   }
   
   /**
    * Render login view
    */
-  renderLoginView() {
-    const appContainer = document.getElementById('app');
-    
-    appContainer.innerHTML = `
-      <div class="login-container">
-        <div class="login-card">
-          <div class="login-header">
-            <h1>VoiceAI</h1>
-            <p>Enterprise Voice Prospecting Platform</p>
+  renderLoginView(container) {
+    container.innerHTML = `
+      <div class="auth-container">
+        <div class="auth-card">
+          <div class="auth-header">
+            <h1 class="auth-title">VoiceAI Platform</h1>
+            <p class="auth-subtitle">Sign in to your account</p>
           </div>
           
-          <form id="login-form">
+          <form id="login-form" class="auth-form">
             <div class="form-group">
-              <label for="email">Email</label>
-              <input type="email" id="email" class="form-control" required>
+              <label for="email" class="form-label">Email</label>
+              <input type="email" id="email" class="form-control" placeholder="Enter your email" required>
             </div>
             
             <div class="form-group">
-              <label for="password">Password</label>
-              <input type="password" id="password" class="form-control" required>
+              <label for="password" class="form-label">Password</label>
+              <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
             </div>
             
-            <div id="login-error" class="error-message" style="display: none;"></div>
+            <div class="login-error" style="display: none; color: red; margin-bottom: 1rem;"></div>
             
-            <button type="submit" class="btn btn-primary btn-block">Login</button>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
           </form>
+          
+          <div class="auth-footer">
+            <p>Don't have an account? Contact your administrator</p>
+          </div>
         </div>
       </div>
     `;
@@ -345,140 +517,134 @@ class VoiceAIApp {
   /**
    * Render authenticated view
    */
-  renderAuthenticatedView() {
+  renderAuthenticatedView(container) {
     const state = this.store.getState();
-    const appContainer = document.getElementById('app');
+    const currentView = state.currentView;
     
-    // Add collapsed class if sidebar is collapsed
-    const sidebarClass = state.isSidebarCollapsed ? 'sidebar-collapsed' : '';
-    
-    // Create main app structure
-    appContainer.innerHTML = `
-      <div class="app-container ${sidebarClass}">
-        <aside class="sidebar">
+    container.innerHTML = `
+      <div class="app-layout">
+        <div class="sidebar">
           <div class="sidebar-header">
-            <div class="logo">VoiceAI</div>
-            <button class="toggle-btn" data-toggle-sidebar>
-              <i data-feather="menu"></i>
-            </button>
+            <a href="#" class="sidebar-brand">
+              <i data-feather="phone"></i>
+              <span>VoiceAI</span>
+            </a>
           </div>
           
-          <nav class="sidebar-nav">
-            <ul>
-              <li class="nav-item ${state.currentView === 'dashboard' ? 'active' : ''}" data-nav="dashboard">
-                <i class="nav-icon" data-feather="home"></i>
-                <span class="nav-text">Dashboard</span>
-              </li>
-              
-              <li class="nav-item ${state.currentView === 'conversations' ? 'active' : ''}" data-nav="conversations">
-                <i class="nav-icon" data-feather="message-circle"></i>
-                <span class="nav-text">Conversations</span>
-              </li>
-              
-              <li class="nav-item ${state.currentView === 'leadManagement' ? 'active' : ''}" data-nav="leadManagement">
-                <i class="nav-icon" data-feather="users"></i>
-                <span class="nav-text">Lead Management</span>
-              </li>
-              
-              <li class="nav-item ${state.currentView === 'analytics' ? 'active' : ''}" data-nav="analytics">
-                <i class="nav-icon" data-feather="bar-chart-2"></i>
-                <span class="nav-text">Analytics</span>
-              </li>
-              
-              <li class="nav-item ${state.currentView === 'flowBuilder' ? 'active' : ''}" data-nav="flowBuilder">
-                <i class="nav-icon" data-feather="git-branch"></i>
-                <span class="nav-text">Flow Builder</span>
-              </li>
-              
-              <li class="nav-item ${state.currentView === 'settings' ? 'active' : ''}" data-nav="settings">
-                <i class="nav-icon" data-feather="settings"></i>
-                <span class="nav-text">Settings</span>
-              </li>
-            </ul>
-          </nav>
-          
-          <div class="sidebar-footer">
-            <div class="user-info">
-              <div class="user-avatar">${state.user.name.charAt(0)}</div>
-              <div class="user-details">
-                <div class="user-name">${state.user.name}</div>
-                <div class="user-role">${state.user.role}</div>
-              </div>
-            </div>
+          <div class="sidebar-nav">
+            <a href="#" class="nav-item ${currentView === 'dashboard' ? 'active' : ''}" data-view="dashboard">
+              <i data-feather="grid"></i>
+              <span>Dashboard</span>
+            </a>
             
-            <button class="logout-btn" data-logout>
+            <a href="#" class="nav-item ${currentView === 'conversations' ? 'active' : ''}" data-view="conversations">
+              <i data-feather="message-square"></i>
+              <span>Conversations</span>
+            </a>
+            
+            <a href="#" class="nav-item ${currentView === 'leadManagement' ? 'active' : ''}" data-view="leadManagement">
+              <i data-feather="users"></i>
+              <span>Lead Management</span>
+            </a>
+            
+            <div class="nav-section-title">Tools</div>
+            
+            <a href="#" class="nav-item ${currentView === 'analytics' ? 'active' : ''}" data-view="analytics">
+              <i data-feather="bar-chart-2"></i>
+              <span>Analytics</span>
+            </a>
+            
+            <a href="#" class="nav-item ${currentView === 'flowBuilder' ? 'active' : ''}" data-view="flowBuilder">
+              <i data-feather="git-branch"></i>
+              <span>Flow Builder</span>
+            </a>
+            
+            <div class="nav-section-title">System</div>
+            
+            <a href="#" class="nav-item ${currentView === 'settings' ? 'active' : ''}" data-view="settings">
+              <i data-feather="settings"></i>
+              <span>Settings</span>
+            </a>
+            
+            <a href="#" class="nav-item" id="logout-btn">
               <i data-feather="log-out"></i>
-              <span class="nav-text">Logout</span>
-            </button>
+              <span>Logout</span>
+            </a>
           </div>
-        </aside>
+        </div>
         
-        <main class="main-content">
-          <header class="app-header">
-            <h1 class="app-title">
-              ${this.getViewTitle(state.currentView)}
-            </h1>
-            
-            <div class="header-actions">
-              <div class="notifications-dropdown">
-                <button class="notifications-btn">
-                  <i data-feather="bell"></i>
-                  ${state.notifications.filter(n => !n.read).length > 0 
-                    ? `<span class="badge">${state.notifications.filter(n => !n.read).length}</span>` 
-                    : ''}
-                </button>
-              </div>
+        <div class="main-content">
+          <div class="header">
+            <div class="header-left">
+              <button class="menu-toggle">
+                <i data-feather="menu"></i>
+              </button>
               
-              <div class="user-profile">
-                <div class="user-avatar">${state.user.name.charAt(0)}</div>
-                <span class="user-name">${state.user.name}</span>
+              <div class="search-bar">
+                <i data-feather="search"></i>
+                <input type="text" placeholder="Search...">
               </div>
             </div>
-          </header>
+            
+            <div class="header-center">
+              <h2 class="view-title">${this.getViewTitle(currentView)}</h2>
+            </div>
+            
+            <div class="header-right">
+              <div class="notifications">
+                <i data-feather="bell"></i>
+                ${state.notifications.length > 0 ? `<div class="notifications-count">${state.notifications.length}</div>` : ''}
+              </div>
+              
+              <div class="user-menu">
+                <div class="user-avatar">
+                  ${state.user?.name?.substr(0, 1) || 'U'}
+                </div>
+              </div>
+            </div>
+          </div>
           
-          <div id="view-container"></div>
-        </main>
+          <div class="view-container" id="view-container">
+            <!-- Current view will be rendered here -->
+          </div>
+        </div>
       </div>
     `;
     
-    // Render the specific view
+    // Render the current component
     this.renderCurrentView();
-    
-    // Initialize feather icons
-    feather.replace();
   }
   
   /**
    * Render the current component view
    */
   renderCurrentView() {
-    const state = this.store.getState();
     const viewContainer = document.getElementById('view-container');
+    const currentView = this.store.getState().currentView;
     
     if (!viewContainer) return;
     
-    // Render the appropriate component
-    switch (state.currentView) {
+    switch (currentView) {
       case 'dashboard':
-        this.components.dashboard.render(viewContainer);
+        this.components.dashboard?.render(viewContainer);
         break;
       case 'conversations':
-        this.components.conversations.render(viewContainer);
+        this.components.conversations?.render(viewContainer);
         break;
       case 'leadManagement':
-        this.components.leadManagement.render(viewContainer);
+        this.components.leadManagement?.render(viewContainer);
         break;
       case 'analytics':
-        this.components.analytics.render(viewContainer);
+        this.components.analytics?.render(viewContainer);
         break;
       case 'flowBuilder':
-        this.components.flowBuilder.render(viewContainer);
+        this.components.flowBuilder?.render(viewContainer);
         break;
       case 'settings':
-        this.components.settings.render(viewContainer);
+        this.components.settings?.render(viewContainer);
         break;
       default:
-        viewContainer.innerHTML = '<div class="error-view">View not found</div>';
+        viewContainer.innerHTML = '<div class="error-state"><h3>View not found</h3></div>';
     }
   }
   
@@ -490,22 +656,11 @@ class VoiceAIApp {
       dashboard: 'Dashboard',
       conversations: 'Conversations',
       leadManagement: 'Lead Management',
-      analytics: 'Analytics & Reporting',
-      flowBuilder: 'Conversation Flow Builder',
+      analytics: 'Analytics',
+      flowBuilder: 'Flow Builder',
       settings: 'Settings'
     };
     
     return titles[view] || 'VoiceAI Platform';
   }
 }
-
-// Initialize app when DOM is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-  const app = new VoiceAIApp();
-  app.init();
-  
-  // Request notification permission
-  if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-    Notification.requestPermission();
-  }
-});
