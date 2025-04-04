@@ -11,6 +11,7 @@ from backend.api.conversations import conversations_bp
 from backend.api.callbacks import callbacks_bp
 from backend.api.ai import elevenlabs_bp
 from backend.api.onboarding.tutorial import tutorial_api, register_tutorial_api
+from backend.api.analytics.mock_voice_analytics import voice_analytics_bp
 
 def create_app():
     """Create Flask application"""
@@ -36,6 +37,7 @@ def create_app():
     app.register_blueprint(callbacks_bp, url_prefix='/api/callbacks')
     app.register_blueprint(elevenlabs_bp)
     app.register_blueprint(tutorial_api, url_prefix='/api/onboarding')
+    app.register_blueprint(voice_analytics_bp)
     
     # Health check endpoint
     @app.route('/health')

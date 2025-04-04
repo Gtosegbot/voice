@@ -10,6 +10,20 @@ function initAnalytics() {
     renderAnalytics();
     setupAnalyticsEvents();
     loadAnalyticsData();
+    
+    // Add script tag for VoiceAnalytics.js if not already included
+    if (!document.querySelector('script[src="/js/components/Analytics/VoiceAnalytics.js"]')) {
+        const script = document.createElement('script');
+        script.src = '/js/components/Analytics/VoiceAnalytics.js';
+        script.onload = () => {
+            console.log('Voice Analytics component loaded');
+            // Initialize voice analytics if tab is active
+            if (document.querySelector('#voice-analytics-tab').classList.contains('active')) {
+                window.initVoiceAnalytics();
+            }
+        };
+        document.head.appendChild(script);
+    }
 }
 
 /**
@@ -21,113 +35,144 @@ function renderAnalytics() {
     analyticsPage.innerHTML = `
         <h1 class="page-title">Análise de Desempenho</h1>
         
-        <div class="row mb-4">
-            <div class="col-md-9">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Desempenho de Prospecção</h5>
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="chart-week-btn">Semana</button>
-                            <button type="button" class="btn btn-sm btn-outline-primary active" id="chart-month-btn">Mês</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="chart-quarter-btn">Trimestre</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="chart-year-btn">Ano</button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="performance-chart" height="280"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card h-100">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Métricas Chave</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-4">
-                            <h6 class="text-muted">Taxa de Conversão</h6>
-                            <h2 id="conversion-rate">18.3%</h2>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar bg-success" style="width: 18%"></div>
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <h6 class="text-muted">Média de Chamadas/Dia</h6>
-                            <h2 id="daily-calls">24</h2>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar bg-primary" style="width: 60%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <h6 class="text-muted">Duração Média</h6>
-                            <h2 id="avg-duration">4:12</h2>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar bg-info" style="width: 70%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ul class="nav nav-tabs mb-4" id="analyticsTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="performance-tab" data-bs-toggle="tab" data-bs-target="#performance-tab-pane" 
+                    type="button" role="tab" aria-controls="performance-tab-pane" aria-selected="true">
+                    Desempenho
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="voice-analytics-tab" data-bs-toggle="tab" data-bs-target="#voice-analytics-tab-pane" 
+                    type="button" role="tab" aria-controls="voice-analytics-tab-pane" aria-selected="false">
+                    Voice of Customer
+                </button>
+            </li>
+        </ul>
         
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Distribuição de Status de Leads</h5>
+        <div class="tab-content" id="analyticsTabContent">
+            <div class="tab-pane fade show active" id="performance-tab-pane" role="tabpanel" aria-labelledby="performance-tab" tabindex="0">
+                <!-- Performance Analytics Content -->
+                <div class="row mb-4">
+                    <div class="col-md-9">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Desempenho de Prospecção</h5>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="chart-week-btn">Semana</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary active" id="chart-month-btn">Mês</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="chart-quarter-btn">Trimestre</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="chart-year-btn">Ano</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="performance-chart" height="280"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <canvas id="lead-status-chart" height="250"></canvas>
+                    <div class="col-md-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Métricas Chave</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-4">
+                                    <h6 class="text-muted">Taxa de Conversão</h6>
+                                    <h2 id="conversion-rate">18.3%</h2>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-success" style="width: 18%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <h6 class="text-muted">Média de Chamadas/Dia</h6>
+                                    <h2 id="daily-calls">24</h2>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-primary" style="width: 60%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="text-muted">Duração Média</h6>
+                                    <h2 id="avg-duration">4:12</h2>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-info" style="width: 70%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Distribuição de Status de Leads</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="lead-status-chart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Origem de Leads</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="lead-source-chart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Desempenho de Agentes</h5>
+                                <select class="form-select form-select-sm w-auto" id="agent-period-select">
+                                    <option value="week">Esta Semana</option>
+                                    <option value="month" selected>Este Mês</option>
+                                    <option value="quarter">Este Trimestre</option>
+                                </select>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Agente</th>
+                                                <th>Chamadas</th>
+                                                <th>Leads Qualificados</th>
+                                                <th>Taxa de Conversão</th>
+                                                <th>Tempo Médio de Chamada</th>
+                                                <th>Pontuação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="agent-performance-table">
+                                            <tr>
+                                                <td>Carregando dados...</td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Origem de Leads</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="lead-source-chart" height="250"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Desempenho de Agentes</h5>
-                        <select class="form-select form-select-sm w-auto" id="agent-period-select">
-                            <option value="week">Esta Semana</option>
-                            <option value="month" selected>Este Mês</option>
-                            <option value="quarter">Este Trimestre</option>
-                        </select>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Agente</th>
-                                        <th>Chamadas</th>
-                                        <th>Leads Qualificados</th>
-                                        <th>Taxa de Conversão</th>
-                                        <th>Tempo Médio de Chamada</th>
-                                        <th>Pontuação</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="agent-performance-table">
-                                    <tr>
-                                        <td>Carregando dados...</td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+            
+            <div class="tab-pane fade" id="voice-analytics-tab-pane" role="tabpanel" aria-labelledby="voice-analytics-tab" tabindex="0">
+                <!-- Voice of Customer Analytics Content -->
+                <div id="voice-analytics-container">
+                    <div class="d-flex justify-content-center my-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
                 </div>
@@ -164,6 +209,40 @@ function setupAnalyticsEvents() {
     // Agent period select
     document.getElementById('agent-period-select').addEventListener('change', function() {
         updateAgentTable(this.value);
+    });
+    
+    // Tab switching
+    document.querySelectorAll('#analyticsTab .nav-link').forEach(tab => {
+        tab.addEventListener('click', function(event) {
+            // Prevent the default action
+            event.preventDefault();
+            
+            // Remove active class from all tabs and set aria-selected to false
+            document.querySelectorAll('#analyticsTab .nav-link').forEach(t => {
+                t.classList.remove('active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            
+            // Hide all tab panes
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('show', 'active');
+            });
+            
+            // Add active class to the clicked tab and set aria-selected to true
+            this.classList.add('active');
+            this.setAttribute('aria-selected', 'true');
+            
+            // Show the corresponding tab pane
+            const target = document.querySelector(this.dataset.bsTarget);
+            if (target) {
+                target.classList.add('show', 'active');
+                
+                // If voice analytics tab is active, initialize it
+                if (this.id === 'voice-analytics-tab' && window.initVoiceAnalytics) {
+                    window.initVoiceAnalytics();
+                }
+            }
+        });
     });
 }
 
