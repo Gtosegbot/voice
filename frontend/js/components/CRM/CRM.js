@@ -1044,3 +1044,14 @@ window.CRM = {
         }
     }
 };
+
+// Expose to global window object to avoid ES6 module export errors
+window.CRM = {
+    initialize: initCRM,
+    showToast: showToast,
+    createContact: createContact,
+    editContact: editContact,
+    deleteContact: deleteContact,
+    filterContacts: filterContacts,
+    exportContacts: exportContacts
+};
