@@ -4,7 +4,6 @@ Database models for the VoiceAI platform
 
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-import json
 
 db = SQLAlchemy()
 
@@ -72,8 +71,8 @@ class Lead(db.Model):
             'status': self.status,
             'score': self.score,
             'source': self.source,
-            'assignedTo': self.assigned_agent.name if self.assigned_agent else None,
-            'campaign': self.campaign.name if self.campaign else None,
+            'agentId': self.agent_id,
+            'campaignId': self.campaign_id,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
             'lastActivity': self.last_activity.isoformat() if self.last_activity else None
@@ -109,9 +108,7 @@ class Campaign(db.Model):
             'startDate': self.start_date.isoformat() if self.start_date else None,
             'endDate': self.end_date.isoformat() if self.end_date else None,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
-            'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
-            'contacted': len([lead for lead in self.leads if lead.status != 'new']),
-            'qualified': len([lead for lead in self.leads if lead.status == 'qualified'])
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
         }
 
 
@@ -138,7 +135,6 @@ class Conversation(db.Model):
         return {
             'id': self.id,
             'leadId': self.lead_id,
-            'contactName': self.lead.name if self.lead else None,
             'channel': self.channel,
             'status': self.status,
             'leadScore': self.lead_score,
@@ -146,9 +142,7 @@ class Conversation(db.Model):
             'leadSource': self.lead_source,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
-            'lastActivityAt': self.last_activity_at.isoformat() if self.last_activity_at else None,
-            'lastMessage': self.messages[-1].content if self.messages else None,
-            'isNew': (datetime.utcnow() - self.created_at).days < 1 if self.created_at else False
+            'lastActivityAt': self.last_activity_at.isoformat() if self.last_activity_at else None
         }
 
 
@@ -205,16 +199,14 @@ class Call(db.Model):
             'id': self.id,
             'conversationId': self.conversation_id,
             'leadId': self.lead_id,
-            'leadName': self.lead.name if self.lead else None,
             'agentId': self.agent_id,
-            'agentName': self.agent.name if self.agent else None,
             'direction': self.direction,
             'status': self.status,
             'startTime': self.start_time.isoformat() if self.start_time else None,
             'endTime': self.end_time.isoformat() if self.end_time else None,
             'duration': self.duration,
             'recordingUrl': self.recording_url,
-            'hasTranscript': bool(self.transcript),
+            'transcript': self.transcript,
             'callNotes': self.call_notes,
             'createdAt': self.created_at.isoformat() if self.created_at else None
         }
@@ -240,10 +232,13 @@ class Note(db.Model):
             'id': self.id,
             'leadId': self.lead_id,
             'userId': self.user_id,
-            'userName': self.user.name if self.user else None,
             'content': self.content,
             'noteType': self.note_type,
-            'createdAt': self.created_at.isoformat() if self.created_at else None
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'user': {
+                'id': self.user.id,
+                'name': self.user.name
+            } if self.user else None
         }
 
 
@@ -269,8 +264,8 @@ class Flow(db.Model):
             'triggerType': self.trigger_type,
             'status': self.status,
             'campaignId': self.campaign_id,
-            'nodes': json.loads(self.nodes) if self.nodes else [],
-            'connections': json.loads(self.connections) if self.connections else [],
+            'nodes': self.nodes,
+            'connections': self.connections,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None
         }
@@ -288,7 +283,7 @@ class Setting(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Composite unique constraint
+    # Unique constraint for user_id, category, key
     __table_args__ = (
         db.UniqueConstraint('user_id', 'category', 'key', name='unique_setting'),
     )

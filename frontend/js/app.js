@@ -1,666 +1,675 @@
 /**
- * VoiceAI Platform - Main Application Class
+ * Main application script for VoiceAI platform
  */
-class VoiceAIApp {
-  constructor() {
-    // Create a store for state management
-    this.store = createStore((state = {
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      token: localStorage.getItem('token'),
-      currentView: 'dashboard',
-      conversations: [],
-      leads: [],
-      campaigns: [],
-      settings: null,
-      notifications: [],
-      error: null
-    }, action) => {
-      switch (action.type) {
-        case 'SET_USER':
-          return { ...state, user: action.payload, isAuthenticated: !!action.payload };
-        case 'SET_TOKEN':
-          return { ...state, token: action.payload };
-        case 'SET_LOADING':
-          return { ...state, isLoading: action.payload };
-        case 'SET_CURRENT_VIEW':
-          return { ...state, currentView: action.payload };
-        case 'SET_CONVERSATIONS':
-          return { ...state, conversations: action.payload };
-        case 'SET_LEADS':
-          return { ...state, leads: action.payload };
-        case 'SET_CAMPAIGNS':
-          return { ...state, campaigns: action.payload };
-        case 'SET_SETTINGS':
-          return { ...state, settings: action.payload };
-        case 'ADD_NOTIFICATION':
-          return { ...state, notifications: [...state.notifications, action.payload] };
-        case 'REMOVE_NOTIFICATION':
-          return { ...state, notifications: state.notifications.filter(n => n.id !== action.payload) };
-        case 'SET_ERROR':
-          return { ...state, error: action.payload };
-        case 'LOGOUT':
-          return {
-            ...state,
-            user: null,
-            isAuthenticated: false,
-            token: null,
-            currentView: 'dashboard'
-          };
-        default:
-          return state;
-      }
-    });
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize application
+    initApp();
+});
+
+/**
+ * Initialize application
+ */
+function initApp() {
+    // Set up event handlers
+    setupEventHandlers();
     
-    // API service
-    this.apiService = {
-      baseUrl: '/api',
-      
-      async request(method, url, data = null, options = {}) {
-        const token = this.app.store.getState().token;
-        
-        const fetchOptions = {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            ...options.headers
-          }
-        };
-        
-        if (token) {
-          fetchOptions.headers.Authorization = `Bearer ${token}`;
-        }
-        
-        if (data && method !== 'GET') {
-          fetchOptions.body = JSON.stringify(data);
-        }
-        
-        try {
-          const response = await fetch(`${this.baseUrl}${url}`, fetchOptions);
-          
-          // Check if response is JSON
-          const contentType = response.headers.get('Content-Type');
-          
-          if (contentType && contentType.includes('application/json')) {
-            const jsonResponse = await response.json();
-            
-            if (!response.ok) {
-              throw {
-                status: response.status,
-                message: jsonResponse.message || 'An error occurred',
-                data: jsonResponse
-              };
-            }
-            
-            return jsonResponse;
-          } else if (options.responseType === 'blob') {
-            return await response.blob();
-          } else {
-            return await response.text();
-          }
-        } catch (error) {
-          console.error(`API Error (${method} ${url}):`, error);
-          
-          // Dispatch error
-          this.app.store.dispatch({
-            type: 'SET_ERROR',
-            payload: {
-              message: error.message || 'An error occurred',
-              status: error.status || 500
-            }
-          });
-          
-          throw error;
-        }
-      },
-      
-      // HTTP methods
-      async get(url, options = {}) {
-        return this.request('GET', url, null, options);
-      },
-      
-      async post(url, data, options = {}) {
-        return this.request('POST', url, data, options);
-      },
-      
-      async put(url, data, options = {}) {
-        return this.request('PUT', url, data, options);
-      },
-      
-      async delete(url, options = {}) {
-        return this.request('DELETE', url, null, options);
-      }
-    };
-    
-    // Set app reference in API service
-    this.apiService.app = this;
-    
-    // Components
-    this.components = {
-      dashboard: null,
-      conversations: null,
-      leadManagement: null,
-      analytics: null,
-      flowBuilder: null,
-      settings: null
-    };
-    
-    // Bind methods
-    this.render = this.render.bind(this);
-    this.handleLogin = this.handleLogin.bind(this);
-    this.handleLogout = this.handleLogout.bind(this);
-    
-    // Subscribe to store changes to re-render
-    this.store.subscribe(this.render);
-  }
-  
-  /**
-   * Initialize the application
-   */
-  async init() {
-    // Initialize the UI
-    this.render();
-    
-    // Check if user is authenticated
-    const token = this.store.getState().token;
-    if (token) {
-      try {
-        this.store.dispatch({ type: 'SET_LOADING', payload: true });
-        
-        // Fetch current user info
-        const user = await this.apiService.get('/auth/me');
-        
-        this.store.dispatch({ type: 'SET_USER', payload: user });
-        
-        // Initialize WebSocket connection
-        this.initializeSocket(token);
-        
-        // Initialize components
-        this.initializeComponents();
-      } catch (error) {
-        console.error('Auth error:', error);
-        
-        // Clear token if invalid
-        localStorage.removeItem('token');
-        this.store.dispatch({ type: 'SET_TOKEN', payload: null });
-      } finally {
-        this.store.dispatch({ type: 'SET_LOADING', payload: false });
-      }
+    // Check authentication
+    checkAuth();
+}
+
+/**
+ * Set up event handlers
+ */
+function setupEventHandlers() {
+    // Sidebar toggle
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            toggleSidebar();
+        });
     }
     
-    // Setup event listeners
-    this.initEventListeners();
-  }
-  
-  /**
-   * Initialize WebSocket connection
-   */
-  initializeSocket(token) {
-    if (!token) return;
-    
-    this.socketService = new SocketService(token);
-    
-    // Handle incoming call notification
-    this.socketService.on('incoming_call', this.handleIncomingCall.bind(this));
-    
-    // Handle new message notification
-    this.socketService.on('new_message', (data) => {
-      this.store.dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now(),
-          type: 'message',
-          title: 'New Message',
-          message: `New message from ${data.sender}`,
-          data: data
-        }
-      });
-      
-      // Update conversations if needed
-      if (this.store.getState().currentView === 'conversations') {
-        // Refresh conversations list
-        this.components.conversations?.fetchConversations();
-      }
+    // Sidebar navigation
+    const navItems = document.querySelectorAll('.sidebar-nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const page = item.getAttribute('data-page');
+            navigateTo(page);
+        });
     });
     
-    // Handle lead assignment notification
-    this.socketService.on('lead_assigned', (data) => {
-      this.store.dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: {
-          id: Date.now(),
-          type: 'lead',
-          title: 'Lead Assigned',
-          message: `New lead assigned: ${data.leadName}`,
-          data: data
-        }
-      });
-      
-      // Update leads if needed
-      if (this.store.getState().currentView === 'leadManagement') {
-        // Refresh leads list
-        this.components.leadManagement?.fetchLeads();
-      }
+    // Login form
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', event => {
+            event.preventDefault();
+            handleLogin();
+        });
+    }
+    
+    // Register form
+    const registerForm = document.getElementById('register-form');
+    if (registerForm) {
+        registerForm.addEventListener('submit', event => {
+            event.preventDefault();
+            handleRegister();
+        });
+    }
+    
+    // Auth links
+    const registerLink = document.getElementById('register-link');
+    if (registerLink) {
+        registerLink.addEventListener('click', event => {
+            event.preventDefault();
+            showAuthPage('register');
+        });
+    }
+    
+    const loginLink = document.getElementById('login-link');
+    if (loginLink) {
+        loginLink.addEventListener('click', event => {
+            event.preventDefault();
+            showAuthPage('login');
+        });
+    }
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            handleLogout();
+        });
+    }
+    
+    // New call button
+    const newCallBtn = document.getElementById('new-call-btn');
+    if (newCallBtn) {
+        newCallBtn.addEventListener('click', () => {
+            openNewCallModal();
+        });
+    }
+    
+    // Start call button
+    const startCallBtn = document.getElementById('start-call-btn');
+    if (startCallBtn) {
+        startCallBtn.addEventListener('click', () => {
+            startCall();
+        });
+    }
+    
+    // End call button
+    const endCallBtn = document.getElementById('end-call-btn');
+    if (endCallBtn) {
+        endCallBtn.addEventListener('click', () => {
+            endCall();
+        });
+    }
+    
+    // Subscribe to store changes
+    window.store.subscribe(state => {
+        updateUI(state);
     });
-  }
-  
-  /**
-   * Handle incoming call notification
-   */
-  handleIncomingCall(data) {
-    // Show notification
-    this.store.dispatch({
-      type: 'ADD_NOTIFICATION',
-      payload: {
-        id: Date.now(),
-        type: 'call',
-        title: 'Incoming Call',
-        message: `Incoming call from ${data.callerName || data.phoneNumber}`,
-        data: data
-      }
-    });
+}
+
+/**
+ * Check authentication
+ */
+function checkAuth() {
+    const isAuthenticated = window.store.state.isAuthenticated;
     
-    // Show incoming call UI
-    // TODO: Implement incoming call UI
-    
-    // Play ringtone
-    const ringtone = new Audio('/audio/ringtone.mp3');
-    ringtone.loop = true;
-    ringtone.play().catch(e => console.error('Error playing ringtone:', e));
-    
-    // Create modal
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="modal" id="incoming-call-modal">
-        <div class="modal-header">
-          <h3 class="modal-title">Incoming Call</h3>
-          <button class="modal-close" id="call-reject">
-            <i data-feather="x"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="incoming-call-container">
-            <div class="caller-avatar">
-              <i data-feather="user" style="width: 48px; height: 48px;"></i>
-            </div>
-            <div class="caller-info">
-              <div class="caller-name">${data.callerName || 'Unknown Caller'}</div>
-              <div class="caller-number">${data.phoneNumber || ''}</div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-danger" id="call-reject-btn">
-            <i data-feather="phone-off"></i>
-            Reject
-          </button>
-          <button class="btn btn-success" id="call-accept-btn">
-            <i data-feather="phone"></i>
-            Accept
-          </button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Initialize feather icons
-    feather.replace();
-    
-    // Handle call actions
-    document.getElementById('call-reject-btn')?.addEventListener('click', () => {
-      ringtone.pause();
-      modal.remove();
-      
-      // Reject call via API
-      this.apiService.post(`/calls/${data.callId}/reject`);
-    });
-    
-    document.getElementById('call-accept-btn')?.addEventListener('click', () => {
-      ringtone.pause();
-      modal.remove();
-      
-      // Accept call via API
-      this.apiService.post(`/calls/${data.callId}/accept`);
-      
-      // Navigate to conversation view
-      this.store.dispatch({ type: 'SET_CURRENT_VIEW', payload: 'conversations' });
-      
-      // TODO: Open specific conversation
-    });
-    
-    document.getElementById('call-reject')?.addEventListener('click', () => {
-      ringtone.pause();
-      modal.remove();
-      
-      // Reject call via API
-      this.apiService.post(`/calls/${data.callId}/reject`);
-    });
-  }
-  
-  /**
-   * Initialize components
-   */
-  initializeComponents() {
-    // Initialize all components
-    this.components.dashboard = new DashboardComponent(this);
-    this.components.conversations = new ConversationsComponent(this);
-    this.components.leadManagement = new LeadManagementComponent(this);
-    this.components.analytics = new AnalyticsComponent(this);
-    this.components.flowBuilder = new FlowBuilderComponent(this);
-    this.components.settings = new SettingsComponent(this);
-  }
-  
-  /**
-   * Initialize application event listeners
-   */
-  initEventListeners() {
-    // Login form submission
-    document.addEventListener('submit', (e) => {
-      if (e.target.id === 'login-form') {
-        e.preventDefault();
-        this.handleLogin(e);
-      }
-    });
-    
-    // Navigation click events
-    document.addEventListener('click', (e) => {
-      // Handle navigation item clicks
-      if (e.target.closest('.nav-item')) {
-        const navItem = e.target.closest('.nav-item');
-        const view = navItem.dataset.view;
+    if (isAuthenticated) {
+        // User is authenticated
+        showApp();
         
-        if (view) {
-          this.store.dispatch({ type: 'SET_CURRENT_VIEW', payload: view });
-        }
-      }
-      
-      // Handle logout button click
-      if (e.target.closest('#logout-btn')) {
-        this.handleLogout();
-      }
-      
-      // Handle notification dismiss
-      if (e.target.closest('.notification-dismiss')) {
-        const notificationId = e.target.closest('.notification-item').dataset.id;
-        this.store.dispatch({ type: 'REMOVE_NOTIFICATION', payload: parseInt(notificationId) });
-      }
-    });
-  }
-  
-  /**
-   * Handle user login
-   */
-  async handleLogin(e) {
-    const form = e.target;
-    const email = form.querySelector('#email').value;
-    const password = form.querySelector('#password').value;
+        // Initialize components
+        initComponents();
+        
+        // Connect to WebSocket
+        connectWebSocket();
+    } else {
+        // User is not authenticated
+        showAuthPage('login');
+    }
+}
+
+/**
+ * Connect to WebSocket
+ */
+function connectWebSocket() {
+    const token = ApiService.getAuthToken();
+    if (token) {
+        window.socketService.connect(token);
+        window.socketService.startPingInterval();
+    }
+}
+
+/**
+ * Show authentication page
+ */
+function showAuthPage(page) {
+    // Hide app container
+    const appContainer = document.querySelector('.app-container');
+    if (appContainer) {
+        appContainer.style.display = 'none';
+    }
     
+    // Hide all auth pages
+    const authPages = document.querySelectorAll('.auth-page');
+    authPages.forEach(page => {
+        page.style.display = 'none';
+    });
+    
+    // Show specified auth page
+    const authPage = document.getElementById(`${page}-page`);
+    if (authPage) {
+        authPage.style.display = 'flex';
+    }
+}
+
+/**
+ * Show application
+ */
+function showApp() {
+    // Hide auth pages
+    const authPages = document.querySelectorAll('.auth-page');
+    authPages.forEach(page => {
+        page.style.display = 'none';
+    });
+    
+    // Show app container
+    const appContainer = document.querySelector('.app-container');
+    if (appContainer) {
+        appContainer.style.display = 'flex';
+    }
+    
+    // Update user info in sidebar
+    updateUserInfo();
+}
+
+/**
+ * Initialize components
+ */
+function initComponents() {
+    // Get current page
+    const activePage = document.querySelector('.sidebar-nav-item.active');
+    let page = 'dashboard';
+    
+    if (activePage) {
+        page = activePage.getAttribute('data-page');
+    }
+    
+    // Navigate to current page
+    navigateTo(page);
+}
+
+/**
+ * Navigate to page
+ */
+function navigateTo(page) {
+    // Update active nav item
+    const navItems = document.querySelectorAll('.sidebar-nav-item');
+    navItems.forEach(item => {
+        if (item.getAttribute('data-page') === page) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+    
+    // Hide all pages
+    const contentPages = document.querySelectorAll('.content-page');
+    contentPages.forEach(page => {
+        page.style.display = 'none';
+    });
+    
+    // Show selected page
+    const selectedPage = document.getElementById(`${page}-page`);
+    if (selectedPage) {
+        selectedPage.style.display = 'block';
+    }
+    
+    // Initialize page component
+    switch (page) {
+        case 'dashboard':
+            window.Dashboard.init();
+            break;
+        case 'leads':
+            window.LeadManagement.init();
+            break;
+        case 'conversations':
+            window.Conversations.init();
+            break;
+        case 'analytics':
+            window.Analytics.init();
+            break;
+        case 'flow-builder':
+            window.FlowBuilder.init();
+            break;
+        case 'settings':
+            window.Settings.init();
+            break;
+    }
+}
+
+/**
+ * Toggle sidebar
+ */
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (sidebar && mainContent) {
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('expanded');
+    }
+}
+
+/**
+ * Update user info in sidebar
+ */
+function updateUserInfo() {
+    const currentUser = window.store.state.currentUser;
+    
+    if (currentUser) {
+        // Update user name and role
+        const userNameElement = document.getElementById('current-user-name');
+        const userRoleElement = document.getElementById('current-user-role');
+        
+        if (userNameElement) {
+            userNameElement.textContent = currentUser.name;
+        }
+        
+        if (userRoleElement) {
+            userRoleElement.textContent = getRoleLabel(currentUser.role);
+        }
+    }
+}
+
+/**
+ * Get role label
+ */
+function getRoleLabel(role) {
+    switch (role) {
+        case 'admin':
+            return 'Administrador';
+        case 'manager':
+            return 'Gerente';
+        case 'agent':
+            return 'Agente';
+        default:
+            return role;
+    }
+}
+
+/**
+ * Handle login
+ */
+async function handleLogin() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    
+    // Validate inputs
     if (!email || !password) {
-      return;
+        alert('Por favor, preencha todos os campos.');
+        return;
     }
     
     try {
-      this.store.dispatch({ type: 'SET_LOADING', payload: true });
-      
-      const response = await this.apiService.post('/auth/login', { email, password });
-      
-      // Save token to localStorage and store
-      localStorage.setItem('token', response.token);
-      this.store.dispatch({ type: 'SET_TOKEN', payload: response.token });
-      this.store.dispatch({ type: 'SET_USER', payload: response.user });
-      
-      // Initialize WebSocket connection
-      this.initializeSocket(response.token);
-      
-      // Initialize components
-      this.initializeComponents();
-    } catch (error) {
-      console.error('Login error:', error);
-      
-      // Show error message
-      const errorElement = form.querySelector('.login-error');
-      if (errorElement) {
-        errorElement.textContent = error.message || 'Invalid email or password';
-        errorElement.style.display = 'block';
-      }
-    } finally {
-      this.store.dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  }
-  
-  /**
-   * Handle user logout
-   */
-  handleLogout() {
-    // Clear token from localStorage and store
-    localStorage.removeItem('token');
-    
-    // Disconnect WebSocket
-    if (this.socketService) {
-      this.socketService.disconnect();
-    }
-    
-    // Dispatch logout action
-    this.store.dispatch({ type: 'LOGOUT' });
-  }
-  
-  /**
-   * Render the current view based on application state
-   */
-  render() {
-    const state = this.store.getState();
-    const appContainer = document.getElementById('app');
-    
-    // Show loading spinner if loading
-    if (state.isLoading) {
-      appContainer.innerHTML = `
-        <div class="loading-container">
-          <div class="spinner"></div>
-          <p>Loading...</p>
-        </div>
-      `;
-      return;
-    }
-    
-    // Render login view if not authenticated
-    if (!state.isAuthenticated) {
-      this.renderLoginView(appContainer);
-      return;
-    }
-    
-    // Render authenticated view
-    this.renderAuthenticatedView(appContainer);
-    
-    // Initialize feather icons
-    feather.replace();
-  }
-  
-  /**
-   * Render login view
-   */
-  renderLoginView(container) {
-    container.innerHTML = `
-      <div class="auth-container">
-        <div class="auth-card">
-          <div class="auth-header">
-            <h1 class="auth-title">VoiceAI Platform</h1>
-            <p class="auth-subtitle">Sign in to your account</p>
-          </div>
-          
-          <form id="login-form" class="auth-form">
-            <div class="form-group">
-              <label for="email" class="form-label">Email</label>
-              <input type="email" id="email" class="form-control" placeholder="Enter your email" required>
-            </div>
-            
-            <div class="form-group">
-              <label for="password" class="form-label">Password</label>
-              <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
-            </div>
-            
-            <div class="login-error" style="display: none; color: red; margin-bottom: 1rem;"></div>
-            
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
-          </form>
-          
-          <div class="auth-footer">
-            <p>Don't have an account? Contact your administrator</p>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-  
-  /**
-   * Render authenticated view
-   */
-  renderAuthenticatedView(container) {
-    const state = this.store.getState();
-    const currentView = state.currentView;
-    
-    container.innerHTML = `
-      <div class="app-layout">
-        <div class="sidebar">
-          <div class="sidebar-header">
-            <a href="#" class="sidebar-brand">
-              <i data-feather="phone"></i>
-              <span>VoiceAI</span>
-            </a>
-          </div>
-          
-          <div class="sidebar-nav">
-            <a href="#" class="nav-item ${currentView === 'dashboard' ? 'active' : ''}" data-view="dashboard">
-              <i data-feather="grid"></i>
-              <span>Dashboard</span>
-            </a>
-            
-            <a href="#" class="nav-item ${currentView === 'conversations' ? 'active' : ''}" data-view="conversations">
-              <i data-feather="message-square"></i>
-              <span>Conversations</span>
-            </a>
-            
-            <a href="#" class="nav-item ${currentView === 'leadManagement' ? 'active' : ''}" data-view="leadManagement">
-              <i data-feather="users"></i>
-              <span>Lead Management</span>
-            </a>
-            
-            <div class="nav-section-title">Tools</div>
-            
-            <a href="#" class="nav-item ${currentView === 'analytics' ? 'active' : ''}" data-view="analytics">
-              <i data-feather="bar-chart-2"></i>
-              <span>Analytics</span>
-            </a>
-            
-            <a href="#" class="nav-item ${currentView === 'flowBuilder' ? 'active' : ''}" data-view="flowBuilder">
-              <i data-feather="git-branch"></i>
-              <span>Flow Builder</span>
-            </a>
-            
-            <div class="nav-section-title">System</div>
-            
-            <a href="#" class="nav-item ${currentView === 'settings' ? 'active' : ''}" data-view="settings">
-              <i data-feather="settings"></i>
-              <span>Settings</span>
-            </a>
-            
-            <a href="#" class="nav-item" id="logout-btn">
-              <i data-feather="log-out"></i>
-              <span>Logout</span>
-            </a>
-          </div>
-        </div>
+        // Login via store
+        await window.store.login(email, password);
         
-        <div class="main-content">
-          <div class="header">
-            <div class="header-left">
-              <button class="menu-toggle">
-                <i data-feather="menu"></i>
-              </button>
-              
-              <div class="search-bar">
-                <i data-feather="search"></i>
-                <input type="text" placeholder="Search...">
-              </div>
-            </div>
-            
-            <div class="header-center">
-              <h2 class="view-title">${this.getViewTitle(currentView)}</h2>
-            </div>
-            
-            <div class="header-right">
-              <div class="notifications">
-                <i data-feather="bell"></i>
-                ${state.notifications.length > 0 ? `<div class="notifications-count">${state.notifications.length}</div>` : ''}
-              </div>
-              
-              <div class="user-menu">
-                <div class="user-avatar">
-                  ${state.user?.name?.substr(0, 1) || 'U'}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="view-container" id="view-container">
-            <!-- Current view will be rendered here -->
-          </div>
-        </div>
-      </div>
-    `;
-    
-    // Render the current component
-    this.renderCurrentView();
-  }
-  
-  /**
-   * Render the current component view
-   */
-  renderCurrentView() {
-    const viewContainer = document.getElementById('view-container');
-    const currentView = this.store.getState().currentView;
-    
-    if (!viewContainer) return;
-    
-    switch (currentView) {
-      case 'dashboard':
-        this.components.dashboard?.render(viewContainer);
-        break;
-      case 'conversations':
-        this.components.conversations?.render(viewContainer);
-        break;
-      case 'leadManagement':
-        this.components.leadManagement?.render(viewContainer);
-        break;
-      case 'analytics':
-        this.components.analytics?.render(viewContainer);
-        break;
-      case 'flowBuilder':
-        this.components.flowBuilder?.render(viewContainer);
-        break;
-      case 'settings':
-        this.components.settings?.render(viewContainer);
-        break;
-      default:
-        viewContainer.innerHTML = '<div class="error-state"><h3>View not found</h3></div>';
+        // Show app
+        showApp();
+        
+        // Initialize components
+        initComponents();
+        
+        // Connect to WebSocket
+        connectWebSocket();
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Erro ao fazer login. Verifique suas credenciais.');
     }
-  }
-  
-  /**
-   * Get the title for the current view
-   */
-  getViewTitle(view) {
-    const titles = {
-      dashboard: 'Dashboard',
-      conversations: 'Conversations',
-      leadManagement: 'Lead Management',
-      analytics: 'Analytics',
-      flowBuilder: 'Flow Builder',
-      settings: 'Settings'
+}
+
+/**
+ * Handle register
+ */
+async function handleRegister() {
+    const name = document.getElementById('register-name').value;
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    const confirmPassword = document.getElementById('register-confirm-password').value;
+    
+    // Validate inputs
+    if (!name || !email || !password || !confirmPassword) {
+        alert('Por favor, preencha todos os campos.');
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        alert('As senhas não coincidem.');
+        return;
+    }
+    
+    try {
+        // Register via store
+        await window.store.register(name, email, password);
+        
+        // Show app
+        showApp();
+        
+        // Initialize components
+        initComponents();
+        
+        // Connect to WebSocket
+        connectWebSocket();
+    } catch (error) {
+        console.error('Register error:', error);
+        alert('Erro ao criar conta. Verifique os dados e tente novamente.');
+    }
+}
+
+/**
+ * Handle logout
+ */
+async function handleLogout() {
+    try {
+        // Disconnect from WebSocket
+        window.socketService.disconnect();
+        window.socketService.stopPingInterval();
+        
+        // Logout via store
+        await window.store.logout();
+        
+        // Show login page
+        showAuthPage('login');
+    } catch (error) {
+        console.error('Logout error:', error);
+    }
+}
+
+/**
+ * Open new call modal
+ */
+async function openNewCallModal() {
+    try {
+        // Get leads for dropdown
+        const data = await ApiService.getLeads();
+        
+        // Populate lead select
+        const leadSelect = document.getElementById('call-lead-select');
+        if (leadSelect) {
+            // Clear existing options
+            leadSelect.innerHTML = '<option value="">-- Selecione um Lead --</option>';
+            
+            // Add leads to select
+            if (data.leads && data.leads.length > 0) {
+                data.leads.forEach(lead => {
+                    const option = document.createElement('option');
+                    option.value = lead.id;
+                    option.textContent = lead.name;
+                    option.setAttribute('data-phone', lead.phone || '');
+                    leadSelect.appendChild(option);
+                });
+            }
+            
+            // Add change event
+            leadSelect.addEventListener('change', () => {
+                const selectedOption = leadSelect.options[leadSelect.selectedIndex];
+                const phone = selectedOption.getAttribute('data-phone') || '';
+                
+                const phoneInput = document.getElementById('call-phone');
+                if (phoneInput) {
+                    phoneInput.value = phone;
+                }
+            });
+        }
+        
+        // Show modal
+        const modal = document.getElementById('new-call-modal');
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+    } catch (error) {
+        console.error('Error loading leads for call:', error);
+    }
+}
+
+/**
+ * Start call
+ */
+async function startCall() {
+    try {
+        // Get form values
+        const leadId = document.getElementById('call-lead-select').value;
+        const phone = document.getElementById('call-phone').value;
+        
+        // Validate inputs
+        if (!phone) {
+            alert('Por favor, informe o número de telefone.');
+            return;
+        }
+        
+        // Close new call modal
+        const newCallModal = document.getElementById('new-call-modal');
+        const newCallModalInstance = bootstrap.Modal.getInstance(newCallModal);
+        newCallModalInstance.hide();
+        
+        // Show loading indicator
+        window.store.setNotification('Iniciando chamada...', 'info');
+        
+        // Start call (in a real app, this would be an API call)
+        // const callData = await ApiService.startCall(leadId, phone);
+        
+        // Mock call data
+        const callData = {
+            id: 'call-' + Date.now(),
+            leadId: leadId,
+            phone: phone,
+            startTime: new Date().toISOString(),
+            status: 'ringing'
+        };
+        
+        // Update store with active call
+        window.store.setActiveCall(callData);
+        
+        // Show active call modal
+        const activeCallModal = document.getElementById('active-call-modal');
+        const activeCallModalInstance = new bootstrap.Modal(activeCallModal);
+        activeCallModalInstance.show();
+        
+        // Update call info
+        updateCallInfo(callData);
+        
+        // Start call timer
+        startCallTimer();
+        
+        // Mock call connection after 2 seconds
+        setTimeout(() => {
+            const updatedCallData = { ...callData, status: 'in-progress' };
+            window.store.setActiveCall(updatedCallData);
+            updateCallInfo(updatedCallData);
+        }, 2000);
+    } catch (error) {
+        console.error('Error starting call:', error);
+        window.store.setNotification('Erro ao iniciar chamada', 'danger');
+    }
+}
+
+/**
+ * End call
+ */
+async function endCall() {
+    try {
+        const activeCall = window.store.state.activeCall;
+        
+        if (!activeCall) {
+            return;
+        }
+        
+        // End call (in a real app, this would be an API call)
+        // await ApiService.endCall(activeCall.id);
+        
+        // Stop call timer
+        stopCallTimer();
+        
+        // Clear active call
+        window.store.clearActiveCall();
+        
+        // Close active call modal
+        const activeCallModal = document.getElementById('active-call-modal');
+        const activeCallModalInstance = bootstrap.Modal.getInstance(activeCallModal);
+        activeCallModalInstance.hide();
+        
+        // Show notification
+        window.store.setNotification('Chamada finalizada', 'success');
+    } catch (error) {
+        console.error('Error ending call:', error);
+        window.store.setNotification('Erro ao finalizar chamada', 'danger');
+    }
+}
+
+/**
+ * Update call info
+ */
+function updateCallInfo(callData) {
+    // Update lead info
+    const leadName = document.getElementById('active-call-lead-name');
+    const leadCompany = document.getElementById('active-call-lead-company');
+    const leadPhone = document.getElementById('active-call-lead-phone');
+    
+    // Get lead by ID (in a real app, this would be from the store or API)
+    const lead = {
+        name: 'Lead',
+        company: 'Empresa',
+        phone: callData.phone
     };
     
-    return titles[view] || 'VoiceAI Platform';
-  }
+    if (leadName) leadName.textContent = lead.name;
+    if (leadCompany) leadCompany.textContent = lead.company;
+    if (leadPhone) leadPhone.textContent = lead.phone;
+    
+    // Update call status
+    const callStatus = document.getElementById('call-status');
+    if (callStatus) {
+        switch (callData.status) {
+            case 'ringing':
+                callStatus.textContent = 'Chamando...';
+                break;
+            case 'in-progress':
+                callStatus.textContent = 'Em andamento';
+                break;
+            case 'ended':
+                callStatus.textContent = 'Finalizada';
+                break;
+            default:
+                callStatus.textContent = callData.status;
+        }
+    }
+}
+
+/**
+ * Start call timer
+ */
+function startCallTimer() {
+    // Clear existing timer
+    if (window.callTimer) {
+        clearInterval(window.callTimer);
+    }
+    
+    // Initialize timer variables
+    window.callStartTime = new Date();
+    
+    // Start timer
+    window.callTimer = setInterval(() => {
+        updateCallTimer();
+    }, 1000);
+    
+    // Initial update
+    updateCallTimer();
+}
+
+/**
+ * Stop call timer
+ */
+function stopCallTimer() {
+    if (window.callTimer) {
+        clearInterval(window.callTimer);
+        window.callTimer = null;
+    }
+}
+
+/**
+ * Update call timer
+ */
+function updateCallTimer() {
+    if (!window.callStartTime) return;
+    
+    const now = new Date();
+    const elapsed = Math.floor((now - window.callStartTime) / 1000);
+    
+    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const seconds = (elapsed % 60).toString().padStart(2, '0');
+    
+    const timerElement = document.getElementById('call-timer');
+    if (timerElement) {
+        timerElement.textContent = `${minutes}:${seconds}`;
+    }
+}
+
+/**
+ * Update UI based on state changes
+ */
+function updateUI(state) {
+    // Update notification
+    updateNotification(state.notification);
+}
+
+/**
+ * Update notification
+ */
+function updateNotification(notification) {
+    // Remove existing notification
+    const existingNotification = document.querySelector('.notification-toast');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+    
+    if (!notification) return;
+    
+    // Create notification element
+    const notificationElement = document.createElement('div');
+    notificationElement.className = `notification-toast toast show bg-${notification.type}`;
+    notificationElement.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+    
+    // Add content
+    notificationElement.innerHTML = `
+        <div class="toast-header">
+            <strong class="me-auto">VoiceAI</strong>
+            <button type="button" class="btn-close" aria-label="Close"></button>
+        </div>
+        <div class="toast-body text-${notification.type === 'danger' ? 'white' : 'dark'}">
+            ${notification.message}
+        </div>
+    `;
+    
+    // Add to body
+    document.body.appendChild(notificationElement);
+    
+    // Add close button event
+    const closeButton = notificationElement.querySelector('.btn-close');
+    if (closeButton) {
+        closeButton.addEventListener('click', () => {
+            notificationElement.remove();
+            window.store.clearNotification();
+        });
+    }
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (document.body.contains(notificationElement)) {
+            notificationElement.remove();
+        }
+    }, 5000);
 }

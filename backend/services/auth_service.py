@@ -8,15 +8,18 @@ import bcrypt
 from datetime import datetime, timedelta
 from backend.models.db import User
 
-# Get JWT secret from environment variables or use a default for development
-JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key-for-development')
-JWT_EXPIRATION = os.environ.get('JWT_EXPIRATION', 86400)  # 24 hours in seconds
+# Secret key for JWT
+JWT_SECRET = os.environ.get('JWT_SECRET', 'voiceai-secret-key')
+# JWT token expiration (default: 24 hours)
+JWT_EXPIRATION = int(os.environ.get('JWT_EXPIRATION', 86400))
 
 def hash_password(password):
     """Hash password using bcrypt"""
-    # Generate a salt and hash the password
+    # Generate salt
     salt = bcrypt.gensalt()
+    # Hash password
     hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    # Return string representation
     return hashed.decode('utf-8')
 
 def check_password(password, hashed_password):
@@ -26,34 +29,30 @@ def check_password(password, hashed_password):
 def generate_token(user):
     """Generate JWT token for a user"""
     payload = {
-        'user_id': user.id,
+        'sub': user.id,
+        'name': user.name,
         'email': user.email,
         'role': user.role,
-        'exp': datetime.utcnow() + timedelta(seconds=int(JWT_EXPIRATION))
+        'iat': datetime.utcnow(),
+        'exp': datetime.utcnow() + timedelta(seconds=JWT_EXPIRATION)
     }
     
     return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 def verify_token(token):
     """Verify JWT token and return payload"""
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise jwt.ExpiredSignatureError('Token expired')
-    except jwt.InvalidTokenError:
-        raise jwt.InvalidTokenError('Invalid token')
+    return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
 
 def get_user_from_token(token):
     """Get user from JWT token"""
     try:
+        # Verify token and get user ID
         payload = verify_token(token)
-        user_id = payload.get('user_id')
+        user_id = payload.get('sub')
         
-        if not user_id:
-            return None
-        
+        # Get user from database
         user = User.query.get(user_id)
+        
         return user
-    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-        raise
+    except Exception:
+        return None

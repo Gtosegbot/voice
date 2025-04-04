@@ -1,497 +1,411 @@
 /**
- * Analytics Component
- * Displays reports, charts and analytics data
+ * Analytics component for VoiceAI platform
  */
-class AnalyticsComponent {
-  constructor(app) {
-    this.app = app;
-    this.store = app.store;
-    this.apiService = app.apiService;
-    this.currentReport = 'overview';
-    this.timeframe = 'month';
-    this.charts = {};
-    this.reportData = null;
-  }
-  
-  /**
-   * Fetch analytics data from the API
-   */
-  async fetchAnalyticsData() {
-    try {
-      const data = await this.apiService.get(`/api/analytics?report=${this.currentReport}&timeframe=${this.timeframe}`);
-      this.reportData = data;
-      return data;
-    } catch (error) {
-      console.error('Error fetching analytics data:', error);
-      return null;
-    }
-  }
-  
-  /**
-   * Render the analytics component
-   */
-  async render(container) {
-    // Show loading state
-    container.innerHTML = `
-      <div class="loading-container">
-        <div class="spinner"></div>
-        <p>Loading analytics data...</p>
-      </div>
-    `;
-    
-    // Fetch analytics data
-    await this.fetchAnalyticsData();
-    
-    if (!this.reportData) {
-      container.innerHTML = `
-        <div class="error-state">
-          <i data-feather="alert-circle" style="width: 48px; height: 48px; color: var(--danger-color);"></i>
-          <h3>Failed to load analytics data</h3>
-          <p>Please try refreshing the page or contact support if the problem persists.</p>
-          <button class="btn btn-primary retry-btn" id="retry-analytics">Retry</button>
-        </div>
-      `;
-      
-      feather.replace();
-      
-      // Add retry event listener
-      document.getElementById('retry-analytics').addEventListener('click', () => {
-        this.render(container);
-      });
-      
-      return;
+
+class Analytics {
+    constructor() {
+        this.element = document.getElementById('analytics-page');
+        this.charts = {};
+        this.dateRange = 'month'; // 'week', 'month', 'quarter', 'year'
     }
     
-    // Render the analytics view
-    container.innerHTML = `
-      <div class="analytics-container">
-        <div class="analytics-header">
-          <div class="report-selector">
-            <select id="report-type" class="form-select">
-              <option value="overview" ${this.currentReport === 'overview' ? 'selected' : ''}>Overview</option>
-              <option value="calls" ${this.currentReport === 'calls' ? 'selected' : ''}>Call Metrics</option>
-              <option value="leads" ${this.currentReport === 'leads' ? 'selected' : ''}>Lead Performance</option>
-              <option value="campaigns" ${this.currentReport === 'campaigns' ? 'selected' : ''}>Campaign Analysis</option>
-              <option value="agents" ${this.currentReport === 'agents' ? 'selected' : ''}>Agent Performance</option>
-              <option value="conversions" ${this.currentReport === 'conversions' ? 'selected' : ''}>Conversion Analysis</option>
-            </select>
-          </div>
-          
-          <div class="timeframe-selector">
-            <button class="btn ${this.timeframe === 'week' ? 'btn-primary' : 'btn-outline'}" data-timeframe="week">Week</button>
-            <button class="btn ${this.timeframe === 'month' ? 'btn-primary' : 'btn-outline'}" data-timeframe="month">Month</button>
-            <button class="btn ${this.timeframe === 'quarter' ? 'btn-primary' : 'btn-outline'}" data-timeframe="quarter">Quarter</button>
-            <button class="btn ${this.timeframe === 'year' ? 'btn-primary' : 'btn-outline'}" data-timeframe="year">Year</button>
-          </div>
-          
-          <div class="report-actions">
-            <button class="btn btn-outline" id="export-report-btn">
-              <i data-feather="download"></i>
-              Export Report
-            </button>
+    /**
+     * Initialize analytics
+     */
+    async init() {
+        if (!this.element) return;
+        
+        try {
+            // Render analytics
+            this.render();
             
-            <button class="btn btn-outline" id="print-report-btn">
-              <i data-feather="printer"></i>
-              Print
-            </button>
-          </div>
-        </div>
-        
-        <div class="report-content">
-          ${this.renderReportContent()}
-        </div>
-      </div>
-    `;
-    
-    // Initialize feather icons
-    feather.replace();
-    
-    // Initialize charts
-    this.initializeCharts();
-    
-    // Set up event listeners
-    this.setupEventListeners();
-  }
-  
-  /**
-   * Render the report content based on the current report type
-   */
-  renderReportContent() {
-    switch (this.currentReport) {
-      case 'overview':
-        return this.renderOverviewReport();
-      case 'calls':
-        return this.renderCallsReport();
-      case 'leads':
-        return this.renderLeadsReport();
-      case 'campaigns':
-        return this.renderCampaignsReport();
-      case 'agents':
-        return this.renderAgentsReport();
-      case 'conversions':
-        return this.renderConversionsReport();
-      default:
-        return this.renderOverviewReport();
+            // Initialize charts after DOM is updated
+            setTimeout(() => {
+                this.initCharts();
+            }, 0);
+            
+            // Set up event handlers
+            this.setupEventHandlers();
+        } catch (error) {
+            console.error('Error initializing analytics:', error);
+        }
     }
-  }
-  
-  /**
-   * Render overview report
-   */
-  renderOverviewReport() {
-    const data = this.reportData;
     
-    return `
-      <div class="report-section">
-        <h2 class="report-title">Performance Overview</h2>
-        <p class="report-description">Summary of key metrics for the selected period</p>
-        
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="metric-header">
-              <i data-feather="phone-call"></i>
-              <span>Total Calls</span>
-            </div>
-            <div class="metric-value">${data.totalCalls}</div>
-            <div class="metric-trend ${data.callsTrend > 0 ? 'trend-up' : 'trend-down'}">
-              <i data-feather="${data.callsTrend > 0 ? 'trending-up' : 'trending-down'}"></i>
-              <span>${Math.abs(data.callsTrend)}% from previous period</span>
-            </div>
-          </div>
-          
-          <div class="metric-card">
-            <div class="metric-header">
-              <i data-feather="users"></i>
-              <span>New Leads</span>
-            </div>
-            <div class="metric-value">${data.newLeads}</div>
-            <div class="metric-trend ${data.leadsTrend > 0 ? 'trend-up' : 'trend-down'}">
-              <i data-feather="${data.leadsTrend > 0 ? 'trending-up' : 'trending-down'}"></i>
-              <span>${Math.abs(data.leadsTrend)}% from previous period</span>
-            </div>
-          </div>
-          
-          <div class="metric-card">
-            <div class="metric-header">
-              <i data-feather="check-circle"></i>
-              <span>Qualified Leads</span>
-            </div>
-            <div class="metric-value">${data.qualifiedLeads}</div>
-            <div class="metric-trend ${data.qualifiedLeadsTrend > 0 ? 'trend-up' : 'trend-down'}">
-              <i data-feather="${data.qualifiedLeadsTrend > 0 ? 'trending-up' : 'trending-down'}"></i>
-              <span>${Math.abs(data.qualifiedLeadsTrend)}% from previous period</span>
-            </div>
-          </div>
-          
-          <div class="metric-card">
-            <div class="metric-header">
-              <i data-feather="dollar-sign"></i>
-              <span>Conversion Rate</span>
-            </div>
-            <div class="metric-value">${data.conversionRate}%</div>
-            <div class="metric-trend ${data.conversionRateTrend > 0 ? 'trend-up' : 'trend-down'}">
-              <i data-feather="${data.conversionRateTrend > 0 ? 'trending-up' : 'trending-down'}"></i>
-              <span>${Math.abs(data.conversionRateTrend)}% from previous period</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="report-section">
-        <h2 class="report-title">Call Volume Trends</h2>
-        <div class="chart-container">
-          <canvas id="callVolumeChart" height="300"></canvas>
-        </div>
-      </div>
-      
-      <div class="report-row">
-        <div class="report-section half">
-          <h2 class="report-title">Lead Sources</h2>
-          <div class="chart-container">
-            <canvas id="leadSourcesChart" height="300"></canvas>
-          </div>
-        </div>
-        
-        <div class="report-section half">
-          <h2 class="report-title">Qualification Rate by Channel</h2>
-          <div class="chart-container">
-            <canvas id="qualificationRateChart" height="300"></canvas>
-          </div>
-        </div>
-      </div>
-      
-      <div class="report-section">
-        <h2 class="report-title">Top Performing Campaigns</h2>
-        <div class="table-responsive">
-          <table class="data-table analytics-table">
-            <thead>
-              <tr>
-                <th>Campaign</th>
-                <th>Leads</th>
-                <th>Calls</th>
-                <th>Contacts</th>
-                <th>Qualified</th>
-                <th>Conversion Rate</th>
-                <th>Performance</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.topCampaigns.map(campaign => `
-                <tr>
-                  <td>${campaign.name}</td>
-                  <td>${campaign.leads}</td>
-                  <td>${campaign.calls}</td>
-                  <td>${campaign.contacts}</td>
-                  <td>${campaign.qualified}</td>
-                  <td>${campaign.conversionRate}%</td>
-                  <td>
-                    <div class="progress-bar">
-                      <div class="progress" style="width: ${campaign.performance}%"></div>
-                      <span class="progress-text">${campaign.performance}%</span>
+    /**
+     * Render analytics
+     */
+    render() {
+        this.element.innerHTML = `
+            <div class="analytics-container">
+                <h1 class="page-title">Análise de Desempenho</h1>
+                
+                <div class="analytics-filters">
+                    <div class="date-range-filter">
+                        <label for="date-range">Período:</label>
+                        <select id="date-range" class="form-select">
+                            <option value="week">Última Semana</option>
+                            <option value="month" selected>Último Mês</option>
+                            <option value="quarter">Último Trimestre</option>
+                            <option value="year">Último Ano</option>
+                        </select>
                     </div>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  }
-  
-  /**
-   * Render calls report
-   */
-  renderCallsReport() {
-    // Implementation for calls report
-    return `<div class="placeholder">Call Metrics Report Content</div>`;
-  }
-  
-  /**
-   * Render leads report
-   */
-  renderLeadsReport() {
-    // Implementation for leads report
-    return `<div class="placeholder">Lead Performance Report Content</div>`;
-  }
-  
-  /**
-   * Render campaigns report
-   */
-  renderCampaignsReport() {
-    // Implementation for campaigns report
-    return `<div class="placeholder">Campaign Analysis Report Content</div>`;
-  }
-  
-  /**
-   * Render agents report
-   */
-  renderAgentsReport() {
-    // Implementation for agents report
-    return `<div class="placeholder">Agent Performance Report Content</div>`;
-  }
-  
-  /**
-   * Render conversions report
-   */
-  renderConversionsReport() {
-    // Implementation for conversions report
-    return `<div class="placeholder">Conversion Analysis Report Content</div>`;
-  }
-  
-  /**
-   * Initialize charts
-   */
-  initializeCharts() {
-    if (this.currentReport === 'overview') {
-      // Call Volume Chart
-      const callVolumeCtx = document.getElementById('callVolumeChart')?.getContext('2d');
-      if (callVolumeCtx) {
-        this.charts.callVolume = new Chart(callVolumeCtx, {
-          type: 'line',
-          data: {
-            labels: this.reportData.callVolumeChart.labels,
-            datasets: [
-              {
-                label: 'Outbound Calls',
-                data: this.reportData.callVolumeChart.outbound,
-                borderColor: '#3f51b5',
-                backgroundColor: 'rgba(63, 81, 181, 0.1)',
-                tension: 0.3,
-                borderWidth: 2,
-                pointRadius: 3,
-                pointBackgroundColor: '#3f51b5'
-              },
-              {
-                label: 'Inbound Calls',
-                data: this.reportData.callVolumeChart.inbound,
-                borderColor: '#f50057',
-                backgroundColor: 'rgba(245, 0, 87, 0.1)',
-                tension: 0.3,
-                borderWidth: 2,
-                pointRadius: 3,
-                pointBackgroundColor: '#f50057'
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'top',
-              },
-              tooltip: {
-                mode: 'index',
-                intersect: false
-              }
-            },
-            scales: {
-              x: {
-                grid: {
-                  display: false
-                }
-              },
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                }
-              }
-            }
-          }
-        });
-      }
-      
-      // Lead Sources Chart
-      const leadSourcesCtx = document.getElementById('leadSourcesChart')?.getContext('2d');
-      if (leadSourcesCtx) {
-        this.charts.leadSources = new Chart(leadSourcesCtx, {
-          type: 'doughnut',
-          data: {
-            labels: this.reportData.leadSourcesChart.labels,
-            datasets: [
-              {
-                data: this.reportData.leadSourcesChart.data,
-                backgroundColor: [
-                  '#3f51b5',
-                  '#f50057',
-                  '#00bcd4',
-                  '#ff9800',
-                  '#4caf50',
-                  '#9c27b0'
-                ]
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'right'
-              }
-            }
-          }
-        });
-      }
-      
-      // Qualification Rate Chart
-      const qualificationRateCtx = document.getElementById('qualificationRateChart')?.getContext('2d');
-      if (qualificationRateCtx) {
-        this.charts.qualificationRate = new Chart(qualificationRateCtx, {
-          type: 'bar',
-          data: {
-            labels: this.reportData.qualificationRateChart.labels,
-            datasets: [
-              {
-                label: 'Qualification Rate (%)',
-                data: this.reportData.qualificationRateChart.data,
-                backgroundColor: [
-                  '#3f51b5',
-                  '#f50057',
-                  '#00bcd4',
-                  '#ff9800'
-                ]
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              x: {
-                grid: {
-                  display: false
-                }
-              },
-              y: {
-                beginAtZero: true,
-                max: 100,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                }
-              }
-            }
-          }
-        });
-      }
+                    
+                    <div class="agent-filter">
+                        <label for="agent-select">Agente:</label>
+                        <select id="agent-select" class="form-select">
+                            <option value="all">Todos os Agentes</option>
+                            <option value="1">João Silva</option>
+                            <option value="2">Maria Oliveira</option>
+                            <option value="3">Carlos Santos</option>
+                        </select>
+                    </div>
+                    
+                    <div class="campaign-filter">
+                        <label for="campaign-select">Campanha:</label>
+                        <select id="campaign-select" class="form-select">
+                            <option value="all">Todas as Campanhas</option>
+                            <option value="1">Prospecção Q2</option>
+                            <option value="2">Lançamento Produto X</option>
+                            <option value="3">Reconquista de Clientes</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-card-title">Total de Chamadas</div>
+                        <div class="stat-card-value">427</div>
+                        <div class="stat-card-change positive">
+                            <i class="fas fa-arrow-up"></i> 8% vs período anterior
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-title">Duração Média</div>
+                        <div class="stat-card-value">4:32</div>
+                        <div class="stat-card-change positive">
+                            <i class="fas fa-arrow-up"></i> 12% vs período anterior
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-title">Taxa de Conversão</div>
+                        <div class="stat-card-value">18.5%</div>
+                        <div class="stat-card-change positive">
+                            <i class="fas fa-arrow-up"></i> 3.2% vs período anterior
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-card-title">Taxa de Contato</div>
+                        <div class="stat-card-value">64%</div>
+                        <div class="stat-card-change negative">
+                            <i class="fas fa-arrow-down"></i> 2% vs período anterior
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analytics-charts">
+                    <div class="chart-container">
+                        <div class="chart-title">Desempenho de Chamadas</div>
+                        <canvas id="calls-performance-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-title">Leads por Status</div>
+                        <canvas id="leads-status-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-title">Desempenho por Agente</div>
+                        <canvas id="agent-performance-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-title">Distribuição de Canais</div>
+                        <canvas id="channel-distribution-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="analytics-insights">
+                    <h2>Insights de IA</h2>
+                    
+                    <div class="insights-container">
+                        <div class="insight-card">
+                            <div class="insight-icon">
+                                <i class="fas fa-lightbulb"></i>
+                            </div>
+                            <div class="insight-content">
+                                <h3>Melhor Horário para Contato</h3>
+                                <p>Chamadas realizadas entre 14h e 16h têm uma taxa de contato 32% maior que em outros horários.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="insight-card">
+                            <div class="insight-icon">
+                                <i class="fas fa-comment-dots"></i>
+                            </div>
+                            <div class="insight-content">
+                                <h3>Frases de Maior Sucesso</h3>
+                                <p>Apresentações que incluem "benefícios específicos" têm uma taxa de conversão 27% maior.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="insight-card">
+                            <div class="insight-icon">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="insight-content">
+                                <h3>Perfil de Lead Ideal</h3>
+                                <p>Leads do setor de tecnologia com mais de 50 funcionários têm uma probabilidade 3x maior de conversão.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
-  }
-  
-  /**
-   * Set up event listeners
-   */
-  setupEventListeners() {
-    // Report type selector
-    document.getElementById('report-type')?.addEventListener('change', (e) => {
-      this.currentReport = e.target.value;
-      this.render(document.getElementById('view-container'));
-    });
     
-    // Timeframe selector
-    document.querySelectorAll('[data-timeframe]').forEach(button => {
-      button.addEventListener('click', (e) => {
-        this.timeframe = e.target.dataset.timeframe;
-        this.render(document.getElementById('view-container'));
-      });
-    });
-    
-    // Export report button
-    document.getElementById('export-report-btn')?.addEventListener('click', () => {
-      this.exportReport();
-    });
-    
-    // Print report button
-    document.getElementById('print-report-btn')?.addEventListener('click', () => {
-      window.print();
-    });
-  }
-  
-  /**
-   * Export report to PDF or CSV
-   */
-  async exportReport() {
-    try {
-      const response = await this.apiService.get(`/api/analytics/export?report=${this.currentReport}&timeframe=${this.timeframe}`, {
-        responseType: 'blob'
-      });
-      
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${this.currentReport}_report.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error('Error exporting report:', error);
+    /**
+     * Set up event handlers
+     */
+    setupEventHandlers() {
+        // Date range filter
+        const dateRange = document.getElementById('date-range');
+        if (dateRange) {
+            dateRange.addEventListener('change', () => {
+                this.dateRange = dateRange.value;
+                this.updateData();
+            });
+        }
+        
+        // Agent filter
+        const agentSelect = document.getElementById('agent-select');
+        if (agentSelect) {
+            agentSelect.addEventListener('change', () => {
+                this.updateData();
+            });
+        }
+        
+        // Campaign filter
+        const campaignSelect = document.getElementById('campaign-select');
+        if (campaignSelect) {
+            campaignSelect.addEventListener('change', () => {
+                this.updateData();
+            });
+        }
     }
-  }
+    
+    /**
+     * Initialize charts
+     */
+    initCharts() {
+        // Calls performance chart
+        const callsPerformanceCtx = document.getElementById('calls-performance-chart');
+        if (callsPerformanceCtx) {
+            this.charts.callsPerformance = new Chart(callsPerformanceCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [
+                        {
+                            label: 'Total de Chamadas',
+                            data: [65, 72, 78, 74, 82, 88],
+                            borderColor: '#4a6fe9',
+                            backgroundColor: 'rgba(74, 111, 233, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Chamadas Atendidas',
+                            data: [42, 48, 53, 48, 56, 59],
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Leads status chart
+        const leadsStatusCtx = document.getElementById('leads-status-chart');
+        if (leadsStatusCtx) {
+            this.charts.leadsStatus = new Chart(leadsStatusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Novos', 'Contatados', 'Qualificados', 'Não Qualificados'],
+                    datasets: [
+                        {
+                            data: [35, 40, 15, 10],
+                            backgroundColor: [
+                                '#4a6fe9',
+                                '#ffc107',
+                                '#28a745',
+                                '#dc3545'
+                            ]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Agent performance chart
+        const agentPerformanceCtx = document.getElementById('agent-performance-chart');
+        if (agentPerformanceCtx) {
+            this.charts.agentPerformance = new Chart(agentPerformanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['João Silva', 'Maria Oliveira', 'Carlos Santos'],
+                    datasets: [
+                        {
+                            label: 'Chamadas Realizadas',
+                            data: [150, 120, 80],
+                            backgroundColor: '#4a6fe9'
+                        },
+                        {
+                            label: 'Leads Qualificados',
+                            data: [45, 30, 25],
+                            backgroundColor: '#28a745'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Channel distribution chart
+        const channelDistributionCtx = document.getElementById('channel-distribution-chart');
+        if (channelDistributionCtx) {
+            this.charts.channelDistribution = new Chart(channelDistributionCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Voz', 'WhatsApp', 'SMS', 'Email'],
+                    datasets: [
+                        {
+                            data: [50, 30, 15, 5],
+                            backgroundColor: [
+                                '#4a6fe9',
+                                '#25D366',
+                                '#ffc107',
+                                '#17a2b8'
+                            ]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * Update data based on filters
+     */
+    async updateData() {
+        try {
+            // Get filter values
+            const agentId = document.getElementById('agent-select').value;
+            const campaignId = document.getElementById('campaign-select').value;
+            
+            // In a real application, you would fetch data from the API based on these filters
+            // const data = await ApiService.getAnalyticsData(this.dateRange, agentId, campaignId);
+            
+            // For now, just update the charts with mock data
+            this.updateCharts();
+        } catch (error) {
+            console.error('Error updating analytics data:', error);
+        }
+    }
+    
+    /**
+     * Update charts with new data
+     */
+    updateCharts() {
+        // In a real application, you would update the charts with real data
+        // For now, let's just update with random data
+        
+        // Calls performance chart
+        if (this.charts.callsPerformance) {
+            // Generate data based on date range
+            let labels = [];
+            let totalCalls = [];
+            let answeredCalls = [];
+            
+            switch (this.dateRange) {
+                case 'week':
+                    labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+                    totalCalls = [15, 18, 20, 22, 19, 8, 5];
+                    answeredCalls = [10, 12, 15, 14, 13, 5, 3];
+                    break;
+                case 'month':
+                    labels = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'];
+                    totalCalls = [65, 72, 78, 82];
+                    answeredCalls = [42, 48, 53, 56];
+                    break;
+                case 'quarter':
+                    labels = ['Jan', 'Fev', 'Mar'];
+                    totalCalls = [180, 210, 195];
+                    answeredCalls = [125, 140, 130];
+                    break;
+                case 'year':
+                    labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                    totalCalls = [65, 72, 78, 74, 82, 88, 90, 85, 92, 95, 88, 93];
+                    answeredCalls = [42, 48, 53, 48, 56, 59, 62, 58, 63, 64, 60, 65];
+                    break;
+            }
+            
+            this.charts.callsPerformance.data.labels = labels;
+            this.charts.callsPerformance.data.datasets[0].data = totalCalls;
+            this.charts.callsPerformance.data.datasets[1].data = answeredCalls;
+            this.charts.callsPerformance.update();
+        }
+    }
 }
+
+// Export the analytics component
+window.Analytics = new Analytics();

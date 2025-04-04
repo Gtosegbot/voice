@@ -4,69 +4,81 @@ Asterisk service for integration with VoiceAI platform
 
 import os
 import requests
-import json
 from flask import current_app
+import json
+import time
+import random
+
+# Asterisk ARI configuration
+ASTERISK_ARI_URL = os.environ.get('ASTERISK_ARI_URL', 'http://asterisk:8088/ari')
+ASTERISK_ARI_USERNAME = os.environ.get('ASTERISK_ARI_USERNAME', 'voiceai')
+ASTERISK_ARI_PASSWORD = os.environ.get('ASTERISK_ARI_PASSWORD', 'voiceai-secret')
+ASTERISK_CONTEXT = os.environ.get('ASTERISK_CONTEXT', 'voiceai-outbound')
+
+# Trunk configuration - we have 3 trunks available for load balancing
+ASTERISK_TRUNKS = ['trunk1', 'trunk2', 'trunk3']
 
 def get_asterisk_url():
     """Get Asterisk ARI URL"""
-    return os.environ.get('ASTERISK_URL', 'http://localhost:8088/ari')
+    return ASTERISK_ARI_URL
 
 def get_asterisk_credentials():
     """Get Asterisk credentials"""
-    return {
-        'username': os.environ.get('ASTERISK_USERNAME', 'asterisk'),
-        'password': os.environ.get('ASTERISK_PASSWORD', 'asterisk')
-    }
+    return (ASTERISK_ARI_USERNAME, ASTERISK_ARI_PASSWORD)
 
 def initiate_call(phone_number, lead_id=None, agent_id=None):
     """Initiate outbound call using Asterisk ARI"""
+    if not phone_number:
+        return {
+            'success': False,
+            'error': 'Phone number is required'
+        }
+    
     try:
-        url = f"{get_asterisk_url()}/channels"
-        auth = get_asterisk_credentials()
+        # Select least busy trunk
+        trunk = get_least_busy_trunk()
         
-        # Determine which trunk to use based on availability
-        # Here we're using a simple round-robin, but in production
-        # this would check actual trunk availability
-        trunk_id = get_least_busy_trunk()
+        # Generate unique call ID
+        call_id = f"voiceai-{int(time.time())}-{random.randint(1000, 9999)}"
         
-        # Format the endpoint based on the trunk
-        endpoint = f"PJSIP/{phone_number}@inphonex-endpoint-{trunk_id}"
-        
-        # Prepare call variables
+        # Set variables to pass to dialplan
         variables = {
             'LEAD_ID': str(lead_id) if lead_id else '',
             'AGENT_ID': str(agent_id) if agent_id else '',
-            'TRUNK_ID': str(trunk_id),
-            'CALL_TYPE': 'outbound'
+            'CALL_ID': call_id,
+            'TRUNK': trunk,
+            'DESTINATION': phone_number
         }
         
-        # Make the API request
+        # Make the API request to Asterisk
         response = requests.post(
-            url,
-            auth=(auth['username'], auth['password']),
+            f"{ASTERISK_ARI_URL}/channels",
+            auth=get_asterisk_credentials(),
             params={
-                'endpoint': endpoint,
-                'extension': phone_number,
-                'context': 'from-internal',
+                'endpoint': f"{trunk}/{phone_number}",
+                'context': ASTERISK_CONTEXT,
+                'extension': 's',
                 'priority': 1,
-                'callerId': os.environ.get('OUTBOUND_CALLER_ID', ''),
+                'callerId': 'VoiceAI',
                 'variables': json.dumps(variables)
             }
         )
         
-        if response.status_code == 200:
-            call_data = response.json()
-            return {
-                'success': True,
-                'call_id': call_data['id'],
-                'trunk_id': trunk_id
-            }
-        else:
-            current_app.logger.error(f"Asterisk call initiation failed: {response.status_code}, {response.text}")
+        if response.status_code != 201:
+            current_app.logger.error(f"Failed to initiate call: {response.text}")
             return {
                 'success': False,
                 'error': f"Failed to initiate call: {response.text}"
             }
+        
+        channel_id = response.json().get('id')
+        
+        return {
+            'success': True,
+            'call_id': call_id,
+            'channel_id': channel_id,
+            'trunk': trunk
+        }
     except Exception as e:
         current_app.logger.error(f"Error initiating call: {str(e)}")
         return {
@@ -77,26 +89,64 @@ def initiate_call(phone_number, lead_id=None, agent_id=None):
 def get_call_status(call_id):
     """Get status of an active call"""
     try:
-        url = f"{get_asterisk_url()}/channels/{call_id}"
-        auth = get_asterisk_credentials()
-        
+        # Get channels from Asterisk ARI
         response = requests.get(
-            url,
-            auth=(auth['username'], auth['password'])
+            f"{ASTERISK_ARI_URL}/channels",
+            auth=get_asterisk_credentials()
+        )
+        
+        if response.status_code != 200:
+            current_app.logger.error(f"Failed to get channels: {response.text}")
+            return {
+                'success': False,
+                'error': f"Failed to get channels: {response.text}"
+            }
+        
+        channels = response.json()
+        
+        # Find channel with matching call ID variable
+        for channel in channels:
+            if channel.get('channelVars', {}).get('CALL_ID') == call_id:
+                return {
+                    'success': True,
+                    'status': channel.get('state'),
+                    'duration': channel.get('creationtime'),
+                    'channel_id': channel.get('id')
+                }
+        
+        # Check if call is in bridges (conferences)
+        response = requests.get(
+            f"{ASTERISK_ARI_URL}/bridges",
+            auth=get_asterisk_credentials()
         )
         
         if response.status_code == 200:
-            call_data = response.json()
-            return {
-                'success': True,
-                'status': call_data['state'],
-                'duration': call_data.get('dialplan', {}).get('seconds', 0)
-            }
-        else:
-            return {
-                'success': False,
-                'error': f"Failed to get call status: {response.text}"
-            }
+            bridges = response.json()
+            
+            for bridge in bridges:
+                for channel_id in bridge.get('channels', []):
+                    # Get channel details
+                    channel_response = requests.get(
+                        f"{ASTERISK_ARI_URL}/channels/{channel_id}",
+                        auth=get_asterisk_credentials()
+                    )
+                    
+                    if channel_response.status_code == 200:
+                        channel = channel_response.json()
+                        if channel.get('channelVars', {}).get('CALL_ID') == call_id:
+                            return {
+                                'success': True,
+                                'status': 'in-conference',
+                                'duration': channel.get('creationtime'),
+                                'channel_id': channel.get('id'),
+                                'bridge_id': bridge.get('id')
+                            }
+        
+        return {
+            'success': False,
+            'error': 'Call not found',
+            'status': 'ended'
+        }
     except Exception as e:
         current_app.logger.error(f"Error getting call status: {str(e)}")
         return {
@@ -107,23 +157,37 @@ def get_call_status(call_id):
 def end_call(call_id):
     """End an active call"""
     try:
-        url = f"{get_asterisk_url()}/channels/{call_id}"
-        auth = get_asterisk_credentials()
+        # Get call status to find channel ID
+        status = get_call_status(call_id)
         
+        if not status.get('success') or status.get('status') == 'ended':
+            return {
+                'success': False,
+                'error': 'Call not found or already ended'
+            }
+        
+        channel_id = status.get('channel_id')
+        
+        # Hang up the channel
         response = requests.delete(
-            url,
-            auth=(auth['username'], auth['password'])
+            f"{ASTERISK_ARI_URL}/channels/{channel_id}",
+            auth=get_asterisk_credentials(),
+            params={
+                'reason': 'normal'
+            }
         )
         
-        if response.status_code in [200, 204]:
-            return {
-                'success': True
-            }
-        else:
+        if response.status_code not in [200, 204]:
+            current_app.logger.error(f"Failed to end call: {response.text}")
             return {
                 'success': False,
                 'error': f"Failed to end call: {response.text}"
             }
+        
+        return {
+            'success': True,
+            'message': 'Call ended successfully'
+        }
     except Exception as e:
         current_app.logger.error(f"Error ending call: {str(e)}")
         return {
@@ -134,39 +198,71 @@ def end_call(call_id):
 def get_least_busy_trunk():
     """Get the least busy trunk from the three available trunks"""
     try:
-        # In a real implementation, this would check actual trunk usage
-        # For now, we'll simulate a simple round-robin approach
-        from random import randint
-        return randint(1, 3)
+        # Get channels from Asterisk ARI
+        response = requests.get(
+            f"{ASTERISK_ARI_URL}/channels",
+            auth=get_asterisk_credentials()
+        )
+        
+        if response.status_code != 200:
+            # If error, just return a random trunk
+            return random.choice(ASTERISK_TRUNKS)
+        
+        channels = response.json()
+        
+        # Count channels per trunk
+        trunk_usage = {trunk: 0 for trunk in ASTERISK_TRUNKS}
+        
+        for channel in channels:
+            trunk = channel.get('channelVars', {}).get('TRUNK')
+            if trunk in trunk_usage:
+                trunk_usage[trunk] += 1
+        
+        # Find trunk with lowest usage
+        least_busy_trunk = min(trunk_usage.items(), key=lambda x: x[1])[0]
+        
+        return least_busy_trunk
     except Exception as e:
-        current_app.logger.error(f"Error determining least busy trunk: {str(e)}")
-        # Default to trunk 1 if there's an error
-        return 1
+        current_app.logger.error(f"Error getting least busy trunk: {str(e)}")
+        # If error, just return a random trunk
+        return random.choice(ASTERISK_TRUNKS)
 
 def play_sound(call_id, sound_file):
     """Play a sound file on an active call"""
     try:
-        url = f"{get_asterisk_url()}/channels/{call_id}/play"
-        auth = get_asterisk_credentials()
+        # Get call status to find channel ID
+        status = get_call_status(call_id)
         
+        if not status.get('success') or status.get('status') == 'ended':
+            return {
+                'success': False,
+                'error': 'Call not found or already ended'
+            }
+        
+        channel_id = status.get('channel_id')
+        
+        # Play sound on the channel
         response = requests.post(
-            url,
-            auth=(auth['username'], auth['password']),
+            f"{ASTERISK_ARI_URL}/channels/{channel_id}/play",
+            auth=get_asterisk_credentials(),
             params={
                 'media': f"sound:{sound_file}"
             }
         )
         
-        if response.status_code == 200:
-            return {
-                'success': True,
-                'playback_id': response.json().get('id')
-            }
-        else:
+        if response.status_code != 201:
+            current_app.logger.error(f"Failed to play sound: {response.text}")
             return {
                 'success': False,
                 'error': f"Failed to play sound: {response.text}"
             }
+        
+        playback_id = response.json().get('id')
+        
+        return {
+            'success': True,
+            'playback_id': playback_id
+        }
     except Exception as e:
         current_app.logger.error(f"Error playing sound: {str(e)}")
         return {
@@ -177,15 +273,25 @@ def play_sound(call_id, sound_file):
 def record_call(call_id, file_name=None):
     """Start recording an active call"""
     try:
-        url = f"{get_asterisk_url()}/channels/{call_id}/record"
-        auth = get_asterisk_credentials()
+        # Get call status to find channel ID
+        status = get_call_status(call_id)
         
+        if not status.get('success') or status.get('status') == 'ended':
+            return {
+                'success': False,
+                'error': 'Call not found or already ended'
+            }
+        
+        channel_id = status.get('channel_id')
+        
+        # Generate recording name if not provided
         if not file_name:
-            file_name = f"call_{call_id}_{int(time.time())}"
+            file_name = f"voiceai-{call_id}-{int(time.time())}"
         
+        # Start recording
         response = requests.post(
-            url,
-            auth=(auth['username'], auth['password']),
+            f"{ASTERISK_ARI_URL}/channels/{channel_id}/record",
+            auth=get_asterisk_credentials(),
             params={
                 'name': file_name,
                 'format': 'wav',
@@ -194,16 +300,17 @@ def record_call(call_id, file_name=None):
             }
         )
         
-        if response.status_code == 200:
-            return {
-                'success': True,
-                'recording_name': file_name
-            }
-        else:
+        if response.status_code != 200:
+            current_app.logger.error(f"Failed to start recording: {response.text}")
             return {
                 'success': False,
                 'error': f"Failed to start recording: {response.text}"
             }
+        
+        return {
+            'success': True,
+            'recording_name': file_name
+        }
     except Exception as e:
         current_app.logger.error(f"Error starting recording: {str(e)}")
         return {
@@ -214,23 +321,34 @@ def record_call(call_id, file_name=None):
 def stop_recording(call_id, recording_name):
     """Stop recording an active call"""
     try:
-        url = f"{get_asterisk_url()}/recordings/live/{recording_name}"
-        auth = get_asterisk_credentials()
+        # Get call status to find channel ID
+        status = get_call_status(call_id)
         
+        if not status.get('success') or status.get('status') == 'ended':
+            return {
+                'success': False,
+                'error': 'Call not found or already ended'
+            }
+        
+        channel_id = status.get('channel_id')
+        
+        # Stop recording
         response = requests.delete(
-            url,
-            auth=(auth['username'], auth['password'])
+            f"{ASTERISK_ARI_URL}/recordings/live/{recording_name}",
+            auth=get_asterisk_credentials()
         )
         
-        if response.status_code in [200, 204]:
-            return {
-                'success': True
-            }
-        else:
+        if response.status_code not in [200, 204]:
+            current_app.logger.error(f"Failed to stop recording: {response.text}")
             return {
                 'success': False,
                 'error': f"Failed to stop recording: {response.text}"
             }
+        
+        return {
+            'success': True,
+            'message': 'Recording stopped successfully'
+        }
     except Exception as e:
         current_app.logger.error(f"Error stopping recording: {str(e)}")
         return {

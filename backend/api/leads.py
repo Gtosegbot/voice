@@ -2,10 +2,14 @@
 Lead management API endpoints for the VoiceAI platform
 """
 
-from flask import Blueprint, request, jsonify
-from backend.models.db import db, Lead, User, Campaign
+from flask import Blueprint, request, jsonify, send_file
+from backend.models.db import db, Lead, User, Note
 from backend.services.auth_service import get_user_from_token
 import jwt
+from datetime import datetime
+import csv
+import io
+import tempfile
 
 leads_bp = Blueprint('leads', __name__)
 
@@ -26,14 +30,11 @@ def get_leads():
             return jsonify({'message': 'Invalid token'}), 401
         
         # Parse query parameters
-        page = request.args.get('page', 1, type=int)
-        limit = request.args.get('limit', 20, type=int)
         status = request.args.get('status')
-        agent_id = request.args.get('agentId', type=int)
-        campaign_id = request.args.get('campaignId', type=int)
+        source = request.args.get('source')
         search = request.args.get('search', '')
-        sort_by = request.args.get('sortBy', 'createdAt')
-        sort_order = request.args.get('sortOrder', 'desc')
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('perPage', 10))
         
         # Build query
         query = Lead.query
@@ -42,45 +43,40 @@ def get_leads():
         if status:
             query = query.filter(Lead.status == status)
         
-        if agent_id:
-            query = query.filter(Lead.agent_id == agent_id)
-        
-        if campaign_id:
-            query = query.filter(Lead.campaign_id == campaign_id)
+        if source:
+            query = query.filter(Lead.source == source)
         
         if search:
-            search_term = f'%{search}%'
             query = query.filter(
-                (Lead.name.ilike(search_term)) |
-                (Lead.company.ilike(search_term)) |
-                (Lead.email.ilike(search_term)) |
-                (Lead.phone.ilike(search_term))
+                db.or_(
+                    Lead.name.ilike(f'%{search}%'),
+                    Lead.company.ilike(f'%{search}%'),
+                    Lead.email.ilike(f'%{search}%')
+                )
             )
         
-        # Apply sorting
-        sort_column = getattr(Lead, sort_by.replace('createdAt', 'created_at'), Lead.created_at)
-        if sort_order == 'desc':
-            query = query.order_by(sort_column.desc())
-        else:
-            query = query.order_by(sort_column.asc())
+        # If user is an agent (not admin), only show their leads
+        if user.role == 'agent':
+            query = query.filter(Lead.agent_id == user.id)
         
-        # Get total count
+        # Count total
         total = query.count()
         
-        # Apply pagination
-        query = query.offset((page - 1) * limit).limit(limit)
-        
-        # Get leads
-        leads = query.all()
+        # Paginate
+        query = query.order_by(Lead.created_at.desc())
+        leads = query.offset((page - 1) * per_page).limit(per_page).all()
         
         # Format lead data
         lead_list = [lead.to_dict() for lead in leads]
         
         return jsonify({
             'leads': lead_list,
-            'total': total,
-            'page': page,
-            'limit': limit
+            'pagination': {
+                'total': total,
+                'page': page,
+                'perPage': per_page,
+                'pages': (total + per_page - 1) // per_page
+            }
         }), 200
     except jwt.ExpiredSignatureError:
         return jsonify({'message': 'Token expired'}), 401
@@ -112,7 +108,19 @@ def get_lead(lead_id):
         if not lead:
             return jsonify({'message': 'Lead not found'}), 404
         
-        return jsonify(lead.to_dict()), 200
+        # If user is an agent (not admin), check if lead belongs to them
+        if user.role == 'agent' and lead.agent_id != user.id:
+            return jsonify({'message': 'Access denied'}), 403
+        
+        # Get notes for the lead
+        notes = Note.query.filter_by(lead_id=lead_id).order_by(Note.created_at.desc()).all()
+        notes_list = [note.to_dict() for note in notes]
+        
+        # Combine lead and notes
+        lead_data = lead.to_dict()
+        lead_data['notes'] = notes_list
+        
+        return jsonify(lead_data), 200
     except jwt.ExpiredSignatureError:
         return jsonify({'message': 'Token expired'}), 401
     except jwt.InvalidTokenError:
@@ -142,7 +150,7 @@ def create_lead():
         
         # Validate required fields
         if not data or not data.get('name'):
-            return jsonify({'message': 'Name is required'}), 400
+            return jsonify({'message': 'Lead name is required'}), 400
         
         # Create new lead
         new_lead = Lead(
@@ -152,10 +160,13 @@ def create_lead():
             email=data.get('email', ''),
             status=data.get('status', 'new'),
             score=data.get('score', 0),
-            source=data.get('source', ''),
-            agent_id=data.get('agentId'),
-            campaign_id=data.get('campaignId')
+            source=data.get('source', 'manual'),
+            agent_id=data.get('agentId', user.id)  # Assign to specified agent or current user
         )
+        
+        # If campaign ID provided, associate with campaign
+        if data.get('campaignId'):
+            new_lead.campaign_id = data.get('campaignId')
         
         # Save to database
         db.session.add(new_lead)
@@ -192,38 +203,52 @@ def update_lead(lead_id):
         if not lead:
             return jsonify({'message': 'Lead not found'}), 404
         
+        # If user is an agent (not admin), check if lead belongs to them
+        if user.role == 'agent' and lead.agent_id != user.id:
+            return jsonify({'message': 'Access denied'}), 403
+        
         # Get request data
         data = request.get_json()
         
+        if not data:
+            return jsonify({'message': 'No data provided'}), 400
+        
         # Update lead fields
-        if data.get('name'):
-            lead.name = data.get('name')
+        if 'name' in data:
+            lead.name = data['name']
         
         if 'company' in data:
-            lead.company = data.get('company', '')
+            lead.company = data['company']
         
         if 'phone' in data:
-            lead.phone = data.get('phone', '')
+            lead.phone = data['phone']
         
         if 'email' in data:
-            lead.email = data.get('email', '')
+            lead.email = data['email']
         
-        if data.get('status'):
-            lead.status = data.get('status')
+        if 'status' in data:
+            lead.status = data['status']
         
         if 'score' in data:
-            lead.score = data.get('score', 0)
+            lead.score = data['score']
         
         if 'source' in data:
-            lead.source = data.get('source', '')
+            lead.source = data['source']
         
-        if 'agentId' in data:
-            lead.agent_id = data.get('agentId')
+        if 'agentId' in data and (user.role == 'admin' or user.id == lead.agent_id):
+            lead.agent_id = data['agentId']
         
-        if 'campaignId' in data:
-            lead.campaign_id = data.get('campaignId')
+        if 'campaignId' in data and user.role == 'admin':
+            lead.campaign_id = data['campaignId']
         
-        # Save changes
+        # Update timestamp
+        lead.updated_at = datetime.utcnow()
+        
+        # If status changed to 'contacted', update last activity
+        if 'status' in data and data['status'] == 'contacted':
+            lead.last_activity = datetime.utcnow()
+        
+        # Save to database
         db.session.commit()
         
         return jsonify(lead.to_dict()), 200
@@ -251,9 +276,9 @@ def delete_lead(lead_id):
         if not user:
             return jsonify({'message': 'Invalid token'}), 401
         
-        # Check user role
-        if user.role not in ['admin', 'manager']:
-            return jsonify({'message': 'Unauthorized: Insufficient permissions'}), 403
+        # Only admins can delete leads
+        if user.role != 'admin':
+            return jsonify({'message': 'Access denied'}), 403
         
         # Get lead by ID
         lead = Lead.query.get(lead_id)
@@ -261,7 +286,7 @@ def delete_lead(lead_id):
         if not lead:
             return jsonify({'message': 'Lead not found'}), 404
         
-        # Delete lead
+        # Delete from database
         db.session.delete(lead)
         db.session.commit()
         
@@ -290,11 +315,9 @@ def export_leads():
         if not user:
             return jsonify({'message': 'Invalid token'}), 401
         
-        # Parse query parameters
+        # Parse query parameters for filtering
         status = request.args.get('status')
-        agent_id = request.args.get('agentId', type=int)
-        campaign_id = request.args.get('campaignId', type=int)
-        search = request.args.get('search', '')
+        source = request.args.get('source')
         
         # Build query
         query = Lead.query
@@ -303,40 +326,49 @@ def export_leads():
         if status:
             query = query.filter(Lead.status == status)
         
-        if agent_id:
-            query = query.filter(Lead.agent_id == agent_id)
+        if source:
+            query = query.filter(Lead.source == source)
         
-        if campaign_id:
-            query = query.filter(Lead.campaign_id == campaign_id)
-        
-        if search:
-            search_term = f'%{search}%'
-            query = query.filter(
-                (Lead.name.ilike(search_term)) |
-                (Lead.company.ilike(search_term)) |
-                (Lead.email.ilike(search_term)) |
-                (Lead.phone.ilike(search_term))
-            )
+        # If user is an agent (not admin), only export their leads
+        if user.role == 'agent':
+            query = query.filter(Lead.agent_id == user.id)
         
         # Get leads
         leads = query.all()
         
-        # Format lead data for CSV
-        csv_data = 'Name,Company,Email,Phone,Status,Score,Source,Agent,Campaign,Created At\n'
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
         
+        # Write header
+        writer.writerow(['ID', 'Name', 'Company', 'Phone', 'Email', 'Status', 'Score', 'Source', 'Created At'])
+        
+        # Write data
         for lead in leads:
-            agent_name = lead.assigned_agent.name if lead.assigned_agent else ''
-            campaign_name = lead.campaign.name if lead.campaign else ''
-            
-            csv_data += f'"{lead.name}","{lead.company or ""}","{lead.email or ""}","{lead.phone or ""}",' \
-                        f'"{lead.status}",{lead.score},"{lead.source or ""}","{agent_name}","{campaign_name}",' \
-                        f'"{lead.created_at.isoformat() if lead.created_at else ""}"\n'
+            writer.writerow([
+                lead.id,
+                lead.name,
+                lead.company,
+                lead.phone,
+                lead.email,
+                lead.status,
+                lead.score,
+                lead.source,
+                lead.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
         
-        # Return CSV file
-        return csv_data, 200, {
-            'Content-Type': 'text/csv',
-            'Content-Disposition': 'attachment; filename=leads_export.csv'
-        }
+        # Create temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+        temp_file.write(output.getvalue().encode('utf-8'))
+        temp_file.close()
+        
+        # Send file
+        return send_file(
+            temp_file.name,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='leads_export.csv'
+        )
     except jwt.ExpiredSignatureError:
         return jsonify({'message': 'Token expired'}), 401
     except jwt.InvalidTokenError:

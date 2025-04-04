@@ -5,17 +5,20 @@ Twilio service for the VoiceAI platform
 import os
 from twilio.rest import Client
 from flask import current_app
+from twilio.base.exceptions import TwilioRestException
+
+# Twilio credentials from environment variables
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
 
 def get_twilio_client():
     """Get Twilio client instance"""
-    account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
-    auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
-    
-    if not account_sid or not auth_token:
-        current_app.logger.error('Twilio credentials not set')
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        current_app.logger.error('Twilio credentials not found')
         return None
     
-    return Client(account_sid, auth_token)
+    return Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 def send_sms(to_number, message):
     """Send SMS message using Twilio"""
@@ -27,23 +30,29 @@ def send_sms(to_number, message):
             'error': 'Twilio client not initialized'
         }
     
+    if not TWILIO_PHONE_NUMBER:
+        return {
+            'success': False,
+            'error': 'Twilio phone number not configured'
+        }
+    
     try:
-        from_number = os.environ.get('TWILIO_PHONE_NUMBER')
-        if not from_number:
-            return {
-                'success': False,
-                'error': 'Twilio phone number not set'
-            }
-        
+        # Send message
         message = client.messages.create(
             body=message,
-            from_=from_number,
+            from_=TWILIO_PHONE_NUMBER,
             to=to_number
         )
         
         return {
             'success': True,
             'sid': message.sid
+        }
+    except TwilioRestException as e:
+        current_app.logger.error(f'Twilio error: {str(e)}')
+        return {
+            'success': False,
+            'error': str(e)
         }
     except Exception as e:
         current_app.logger.error(f'Error sending SMS: {str(e)}')
@@ -62,36 +71,41 @@ def make_call(to_number, url=None, twiml=None):
             'error': 'Twilio client not initialized'
         }
     
+    if not TWILIO_PHONE_NUMBER:
+        return {
+            'success': False,
+            'error': 'Twilio phone number not configured'
+        }
+    
     try:
-        from_number = os.environ.get('TWILIO_PHONE_NUMBER')
-        if not from_number:
-            return {
-                'success': False,
-                'error': 'Twilio phone number not set'
-            }
+        call_params = {
+            'to': to_number,
+            'from_': TWILIO_PHONE_NUMBER
+        }
         
-        # Call with either a URL to TwiML or TwiML directly
+        # Use either URL or TwiML
         if url:
-            call = client.calls.create(
-                to=to_number,
-                from_=from_number,
-                url=url
-            )
+            call_params['url'] = url
         elif twiml:
-            call = client.calls.create(
-                to=to_number,
-                from_=from_number,
-                twiml=twiml
-            )
+            call_params['twiml'] = twiml
         else:
             return {
                 'success': False,
-                'error': 'Either url or twiml parameter must be provided'
+                'error': 'Either URL or TwiML required'
             }
+        
+        # Make call
+        call = client.calls.create(**call_params)
         
         return {
             'success': True,
             'sid': call.sid
+        }
+    except TwilioRestException as e:
+        current_app.logger.error(f'Twilio error: {str(e)}')
+        return {
+            'success': False,
+            'error': str(e)
         }
     except Exception as e:
         current_app.logger.error(f'Error making call: {str(e)}')
@@ -123,6 +137,12 @@ def get_call_status(call_sid):
             'started_at': call.start_time,
             'ended_at': call.end_time
         }
+    except TwilioRestException as e:
+        current_app.logger.error(f'Twilio error: {str(e)}')
+        return {
+            'success': False,
+            'error': str(e)
+        }
     except Exception as e:
         current_app.logger.error(f'Error getting call status: {str(e)}')
         return {
@@ -145,7 +165,16 @@ def get_recording_url(recording_sid):
         
         return {
             'success': True,
-            'url': recording.uri
+            'url': recording.uri,
+            'duration': recording.duration,
+            'channels': recording.channels,
+            'status': recording.status
+        }
+    except TwilioRestException as e:
+        current_app.logger.error(f'Twilio error: {str(e)}')
+        return {
+            'success': False,
+            'error': str(e)
         }
     except Exception as e:
         current_app.logger.error(f'Error getting recording URL: {str(e)}')

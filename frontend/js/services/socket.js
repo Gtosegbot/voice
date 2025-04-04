@@ -1,143 +1,188 @@
 /**
- * Socket Service for WebSocket communication
+ * WebSocket service for VoiceAI platform
  */
+
 class SocketService {
-  constructor(token) {
-    this.socket = null;
-    this.token = token;
-    this.baseUrl = 'ws://localhost:8001'; // WebSocket server URL
-    this.events = {};
-    this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.reconnectDelay = 3000;
-    this.connect();
-  }
-  
-  /**
-   * Connect to the WebSocket server
-   */
-  connect() {
-    try {
-      this.socket = new WebSocket(`${this.baseUrl}?token=${this.token}`);
-      
-      this.socket.onopen = () => {
-        console.log('WebSocket connection established');
+    constructor() {
+        this.socket = null;
+        this.isConnected = false;
         this.reconnectAttempts = 0;
-        this.triggerEvent('connect');
-      };
-      
-      this.socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          this.handleMessage(data);
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+        this.maxReconnectAttempts = 5;
+        this.reconnectDelay = 2000;
+        this.eventHandlers = {};
+        this.socketUrl = 'ws://localhost:8765';
+    }
+    
+    /**
+     * Connect to WebSocket server
+     */
+    connect(token) {
+        if (this.socket) {
+            this.disconnect();
         }
-      };
-      
-      this.socket.onclose = (event) => {
-        console.log('WebSocket connection closed');
-        this.triggerEvent('disconnect');
         
-        // Attempt to reconnect
-        this.attemptReconnect();
-      };
-      
-      this.socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-    } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
-    }
-  }
-  
-  /**
-   * Attempt to reconnect to the WebSocket server
-   */
-  attemptReconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++;
-      
-      console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-      
-      setTimeout(() => {
-        this.connect();
-      }, this.reconnectDelay);
-    } else {
-      console.log('Max reconnect attempts reached');
-      this.triggerEvent('reconnect_failed');
-    }
-  }
-  
-  /**
-   * Handle incoming WebSocket messages
-   */
-  handleMessage(data) {
-    if (data.event && typeof data.event === 'string') {
-      this.triggerEvent(data.event, data.payload);
-    }
-  }
-  
-  /**
-   * Send data to the WebSocket server
-   */
-  send(event, payload = {}) {
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      const message = JSON.stringify({
-        event,
-        payload
-      });
-      
-      this.socket.send(message);
-      return true;
-    } else {
-      console.error('WebSocket is not connected');
-      return false;
-    }
-  }
-  
-  /**
-   * Register an event handler
-   */
-  on(event, callback) {
-    if (!this.events[event]) {
-      this.events[event] = [];
+        this.socket = new WebSocket(this.socketUrl);
+        
+        // Set up event handlers
+        this.socket.onopen = () => {
+            console.log('WebSocket connected');
+            this.isConnected = true;
+            this.reconnectAttempts = 0;
+            
+            // Send authentication message
+            this.socket.send(JSON.stringify({
+                token: token
+            }));
+            
+            // Trigger connect event
+            this._triggerEvent('connect');
+        };
+        
+        this.socket.onclose = (event) => {
+            console.log('WebSocket disconnected', event);
+            this.isConnected = false;
+            
+            // Try to reconnect if not closed cleanly
+            if (!event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts) {
+                this.reconnectAttempts++;
+                setTimeout(() => {
+                    this.connect(token);
+                }, this.reconnectDelay * this.reconnectAttempts);
+            }
+            
+            // Trigger disconnect event
+            this._triggerEvent('disconnect');
+        };
+        
+        this.socket.onerror = (error) => {
+            console.error('WebSocket error', error);
+            
+            // Trigger error event
+            this._triggerEvent('error', error);
+        };
+        
+        this.socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                const eventType = data.type;
+                
+                // Trigger event
+                this._triggerEvent(eventType, data.payload);
+                
+                // Also trigger message event
+                this._triggerEvent('message', data);
+            } catch (error) {
+                console.error('Error parsing WebSocket message', error);
+            }
+        };
     }
     
-    this.events[event].push(callback);
-    
-    return this;
-  }
-  
-  /**
-   * Remove an event handler
-   */
-  off(event, callback) {
-    if (this.events[event]) {
-      this.events[event] = this.events[event].filter(cb => cb !== callback);
+    /**
+     * Disconnect from WebSocket server
+     */
+    disconnect() {
+        if (this.socket) {
+            this.socket.close();
+            this.socket = null;
+            this.isConnected = false;
+        }
     }
     
-    return this;
-  }
-  
-  /**
-   * Trigger an event
-   */
-  triggerEvent(event, data) {
-    if (this.events[event]) {
-      this.events[event].forEach(callback => {
-        callback(data);
-      });
+    /**
+     * Send message to WebSocket server
+     */
+    send(type, payload = {}) {
+        if (!this.isConnected) {
+            console.error('WebSocket not connected');
+            return false;
+        }
+        
+        try {
+            this.socket.send(JSON.stringify({
+                type,
+                payload,
+                timestamp: new Date().toISOString()
+            }));
+            return true;
+        } catch (error) {
+            console.error('Error sending WebSocket message', error);
+            return false;
+        }
     }
-  }
-  
-  /**
-   * Disconnect from the WebSocket server
-   */
-  disconnect() {
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
+    
+    /**
+     * Register event handler
+     */
+    on(event, handler) {
+        if (!this.eventHandlers[event]) {
+            this.eventHandlers[event] = [];
+        }
+        
+        this.eventHandlers[event].push(handler);
     }
-  }
+    
+    /**
+     * Remove event handler
+     */
+    off(event, handler) {
+        if (!this.eventHandlers[event]) {
+            return;
+        }
+        
+        if (!handler) {
+            // Remove all handlers for this event
+            delete this.eventHandlers[event];
+        } else {
+            // Remove specific handler
+            this.eventHandlers[event] = this.eventHandlers[event].filter(h => h !== handler);
+        }
+    }
+    
+    /**
+     * Trigger event
+     */
+    _triggerEvent(event, data) {
+        if (!this.eventHandlers[event]) {
+            return;
+        }
+        
+        for (const handler of this.eventHandlers[event]) {
+            try {
+                handler(data);
+            } catch (error) {
+                console.error(`Error in ${event} handler:`, error);
+            }
+        }
+    }
+    
+    /**
+     * Send ping message
+     */
+    ping() {
+        return this.send('ping');
+    }
+    
+    /**
+     * Start ping interval
+     */
+    startPingInterval(interval = 30000) {
+        this.pingInterval = setInterval(() => {
+            if (this.isConnected) {
+                this.ping();
+            }
+        }, interval);
+    }
+    
+    /**
+     * Stop ping interval
+     */
+    stopPingInterval() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
+    }
 }
+
+// Create global instance
+window.socketService = new SocketService();

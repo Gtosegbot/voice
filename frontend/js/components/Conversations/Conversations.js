@@ -1,815 +1,626 @@
 /**
- * Conversations Component
- * Manages conversations, messages, and call interactions
+ * Conversations component for VoiceAI platform
  */
-class ConversationsComponent {
-  constructor(app) {
-    this.app = app;
-    this.store = app.store;
-    this.apiService = app.apiService;
-    this.socketService = app.socketService;
-    this.conversations = [];
-    this.currentConversation = null;
-    this.messages = [];
-    this.isLoading = false;
-    this.isLoadingMessages = false;
-    this.filter = {
-      status: 'all',
-      channel: 'all',
-      searchQuery: ''
-    };
-  }
-  
-  /**
-   * Fetch conversations from the API
-   */
-  async fetchConversations() {
-    try {
-      this.isLoading = true;
-      
-      const queryParams = new URLSearchParams();
-      
-      if (this.filter.status !== 'all') {
-        queryParams.append('status', this.filter.status);
-      }
-      
-      if (this.filter.channel !== 'all') {
-        queryParams.append('channel', this.filter.channel);
-      }
-      
-      if (this.filter.searchQuery) {
-        queryParams.append('search', this.filter.searchQuery);
-      }
-      
-      const data = await this.apiService.get(`/conversations?${queryParams.toString()}`);
-      this.conversations = data.conversations;
-      this.isLoading = false;
-      
-      return data;
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-      this.isLoading = false;
-      return null;
-    }
-  }
-  
-  /**
-   * Fetch messages for a conversation
-   */
-  async fetchMessages(conversationId) {
-    if (!conversationId) return null;
-    
-    try {
-      this.isLoadingMessages = true;
-      
-      const data = await this.apiService.get(`/conversations/${conversationId}/messages`);
-      this.messages = data.messages;
-      this.isLoadingMessages = false;
-      
-      return data;
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      this.isLoadingMessages = false;
-      return null;
-    }
-  }
-  
-  /**
-   * Render the conversations component
-   */
-  async render(container) {
-    // Show loading state
-    container.innerHTML = `
-      <div class="loading-container">
-        <div class="spinner"></div>
-        <p>Loading conversations...</p>
-      </div>
-    `;
-    
-    // Fetch conversations
-    await this.fetchConversations();
-    
-    // If a conversation is selected, fetch its messages
-    if (this.currentConversation) {
-      await this.fetchMessages(this.currentConversation.id);
+
+class Conversations {
+    constructor() {
+        this.element = document.getElementById('conversations-page');
+        this.currentConversation = null;
+        this.conversationsList = [];
+        this.messages = [];
     }
     
-    // Render the conversation interface
-    container.innerHTML = `
-      <div class="conversation-container">
-        <!-- Conversation Sidebar -->
-        <div class="conversation-sidebar">
-          <div class="conversation-header">
-            <div class="conversation-filter">
-              <input type="text" class="form-control" id="conversation-search" placeholder="Search conversations..." value="${this.filter.searchQuery}">
+    /**
+     * Initialize conversations
+     */
+    async init() {
+        if (!this.element) return;
+        
+        try {
+            // Render conversations
+            this.render();
+            
+            // Load conversations
+            await this.loadConversations();
+            
+            // Set up event handlers
+            this.setupEventHandlers();
+        } catch (error) {
+            console.error('Error initializing conversations:', error);
+        }
+    }
+    
+    /**
+     * Render conversations
+     */
+    render() {
+        this.element.innerHTML = `
+            <div class="conversations-container">
+                <div class="conversations-sidebar">
+                    <div class="conversations-header">
+                        <input type="text" class="conversations-search" placeholder="Buscar conversas...">
+                    </div>
+                    <div class="conversations-list" id="conversations-list">
+                        <!-- Conversations will be loaded here -->
+                        <div class="text-center p-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="conversation-main">
+                    <div class="conversation-info" id="conversation-info">
+                        <div class="conversation-lead-info">
+                            <h3>Selecione uma conversa</h3>
+                            <p>Escolha uma conversa para ver as mensagens</p>
+                        </div>
+                        <div class="conversation-actions">
+                            <!-- Actions will be loaded when a conversation is selected -->
+                        </div>
+                    </div>
+                    
+                    <div class="conversation-messages" id="conversation-messages">
+                        <!-- Messages will be loaded when a conversation is selected -->
+                        <div class="conversation-empty text-center p-5">
+                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                            <p>Selecione uma conversa para ver as mensagens</p>
+                        </div>
+                    </div>
+                    
+                    <div class="message-input-container" id="message-input-container" style="display: none;">
+                        <textarea class="message-input" id="message-input" placeholder="Digite sua mensagem..."></textarea>
+                        <button class="btn btn-primary" id="send-message-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
             
+            <!-- New Conversation Modal -->
+            <div class="modal fade" id="new-conversation-modal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Nova Conversa</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="new-conversation-form">
+                                <div class="mb-3">
+                                    <label for="conversation-lead-select" class="form-label">Selecione um Lead</label>
+                                    <select id="conversation-lead-select" class="form-select">
+                                        <option value="">-- Selecione um Lead --</option>
+                                        <!-- Will be populated dynamically -->
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="conversation-channel" class="form-label">Canal</label>
+                                    <select id="conversation-channel" class="form-select">
+                                        <option value="whatsapp">WhatsApp</option>
+                                        <option value="voice">Voz</option>
+                                        <option value="sms">SMS</option>
+                                        <option value="email">Email</option>
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary" id="start-conversation-btn">Iniciar Conversa</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Set up event handlers
+     */
+    setupEventHandlers() {
+        // Add floating action button to the page
+        this.addFloatingActionButton();
+        
+        // Message input
+        const messageInput = document.getElementById('message-input');
+        const sendMessageBtn = document.getElementById('send-message-btn');
+        
+        if (messageInput && sendMessageBtn) {
+            // Send message on button click
+            sendMessageBtn.addEventListener('click', () => {
+                this.sendMessage();
+            });
+            
+            // Send message on enter key
+            messageInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    this.sendMessage();
+                }
+            });
+        }
+        
+        // Start conversation
+        const startConversationBtn = document.getElementById('start-conversation-btn');
+        if (startConversationBtn) {
+            startConversationBtn.addEventListener('click', () => {
+                this.startConversation();
+            });
+        }
+    }
+    
+    /**
+     * Add floating action button
+     */
+    addFloatingActionButton() {
+        // Create floating action button
+        const fab = document.createElement('button');
+        fab.className = 'btn btn-primary btn-lg rounded-circle position-fixed';
+        fab.id = 'new-conversation-fab';
+        fab.innerHTML = '<i class="fas fa-plus"></i>';
+        fab.style.cssText = 'bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1000;';
+        
+        // Add event listener
+        fab.addEventListener('click', () => {
+            this.openNewConversationModal();
+        });
+        
+        // Add to page
+        document.body.appendChild(fab);
+    }
+    
+    /**
+     * Open new conversation modal
+     */
+    async openNewConversationModal() {
+        try {
+            // Get lead select element
+            const leadSelect = document.getElementById('conversation-lead-select');
+            
+            if (leadSelect) {
+                // Clear existing options
+                leadSelect.innerHTML = '<option value="">-- Selecione um Lead --</option>';
+                
+                // Load leads
+                const data = await ApiService.getLeads();
+                
+                // Add leads to select
+                if (data.leads && data.leads.length > 0) {
+                    data.leads.forEach(lead => {
+                        const option = document.createElement('option');
+                        option.value = lead.id;
+                        option.textContent = lead.name;
+                        leadSelect.appendChild(option);
+                    });
+                }
+            }
+            
+            // Open modal
+            const modal = document.getElementById('new-conversation-modal');
+            const modalInstance = new bootstrap.Modal(modal);
+            modalInstance.show();
+        } catch (error) {
+            console.error('Error loading leads for new conversation:', error);
+            window.store.setNotification('Erro ao carregar leads', 'danger');
+        }
+    }
+    
+    /**
+     * Start new conversation
+     */
+    async startConversation() {
+        try {
+            // Get form data
+            const leadId = document.getElementById('conversation-lead-select').value;
+            const channel = document.getElementById('conversation-channel').value;
+            
+            // Validate form
+            if (!leadId) {
+                alert('Selecione um lead');
+                return;
+            }
+            
+            // Create conversation
+            const conversation = await ApiService.createConversation({
+                leadId,
+                channel
+            });
+            
+            // Close modal
+            const modal = document.getElementById('new-conversation-modal');
+            const modalInstance = bootstrap.Modal.getInstance(modal);
+            modalInstance.hide();
+            
+            // Reload conversations
+            await this.loadConversations();
+            
+            // Select the new conversation
+            this.selectConversation(conversation.id);
+            
+            // Show notification
+            window.store.setNotification('Conversa iniciada com sucesso', 'success');
+        } catch (error) {
+            console.error('Error starting conversation:', error);
+            window.store.setNotification('Erro ao iniciar conversa', 'danger');
+        }
+    }
+    
+    /**
+     * Load conversations
+     */
+    async loadConversations() {
+        try {
+            // Get conversations list element
+            const conversationsList = document.getElementById('conversations-list');
+            
+            if (!conversationsList) return;
+            
+            // Show loading
+            conversationsList.innerHTML = `
+                <div class="text-center p-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            `;
+            
+            // Load conversations from store
+            const conversations = await window.store.loadConversations();
+            this.conversationsList = conversations;
+            
+            // Update conversations list
+            this.updateConversationsList();
+        } catch (error) {
+            console.error('Error loading conversations:', error);
+            
+            // Show error
+            const conversationsList = document.getElementById('conversations-list');
+            if (conversationsList) {
+                conversationsList.innerHTML = `
+                    <div class="text-center p-3 text-danger">
+                        <i class="fas fa-exclamation-circle"></i> Erro ao carregar conversas. Tente novamente.
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    /**
+     * Update conversations list
+     */
+    updateConversationsList() {
+        const conversationsList = document.getElementById('conversations-list');
+        if (!conversationsList) return;
+        
+        if (!this.conversationsList || this.conversationsList.length === 0) {
+            conversationsList.innerHTML = `
+                <div class="text-center p-3">
+                    <p class="mb-2">Nenhuma conversa encontrada</p>
+                    <button id="create-first-conversation-btn" class="btn btn-sm btn-primary">
+                        Iniciar Nova Conversa
+                    </button>
+                </div>
+            `;
+            
+            // Add event listener to create conversation button
+            const createFirstConversationBtn = document.getElementById('create-first-conversation-btn');
+            if (createFirstConversationBtn) {
+                createFirstConversationBtn.addEventListener('click', () => {
+                    this.openNewConversationModal();
+                });
+            }
+            
+            return;
+        }
+        
+        // Generate list items
+        let html = '';
+        this.conversationsList.forEach(conversation => {
+            const isActive = this.currentConversation && this.currentConversation.id === conversation.id;
+            
+            html += `
+                <div class="conversation-item ${isActive ? 'active' : ''}" data-id="${conversation.id}">
+                    <div class="conversation-lead">${conversation.leadName || 'Lead'}</div>
+                    <div class="conversation-preview">${conversation.lastMessage || 'Nenhuma mensagem'}</div>
+                    <div class="conversation-time">${this.formatDate(conversation.lastActivityAt)}</div>
+                </div>
+            `;
+        });
+        
+        conversationsList.innerHTML = html;
+        
+        // Add event listeners
+        const conversationItems = conversationsList.querySelectorAll('.conversation-item');
+        conversationItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const conversationId = item.getAttribute('data-id');
+                this.selectConversation(conversationId);
+            });
+        });
+    }
+    
+    /**
+     * Select conversation
+     */
+    async selectConversation(conversationId) {
+        try {
+            // Deselect current conversation
+            const currentItem = document.querySelector('.conversation-item.active');
+            if (currentItem) {
+                currentItem.classList.remove('active');
+            }
+            
+            // Select new conversation
+            const newItem = document.querySelector(`.conversation-item[data-id="${conversationId}"]`);
+            if (newItem) {
+                newItem.classList.add('active');
+            }
+            
+            // Get conversation
+            const conversation = await ApiService.getConversation(conversationId);
+            this.currentConversation = conversation;
+            
+            // Update conversation info
+            this.updateConversationInfo();
+            
+            // Load messages
+            await this.loadMessages(conversationId);
+            
+            // Show message input
+            const messageInputContainer = document.getElementById('message-input-container');
+            if (messageInputContainer) {
+                messageInputContainer.style.display = 'flex';
+            }
+        } catch (error) {
+            console.error('Error selecting conversation:', error);
+            window.store.setNotification('Erro ao carregar conversa', 'danger');
+        }
+    }
+    
+    /**
+     * Update conversation info
+     */
+    updateConversationInfo() {
+        const conversationInfo = document.getElementById('conversation-info');
+        if (!conversationInfo) return;
+        
+        if (!this.currentConversation) {
+            conversationInfo.innerHTML = `
+                <div class="conversation-lead-info">
+                    <h3>Selecione uma conversa</h3>
+                    <p>Escolha uma conversa para ver as mensagens</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Get lead name and company
+        const lead = this.currentConversation.lead || {};
+        const leadName = lead.name || 'Lead';
+        const leadCompany = lead.company || '';
+        
+        // Get channel icon
+        let channelIcon = '';
+        switch (this.currentConversation.channel) {
+            case 'whatsapp':
+                channelIcon = 'fa-whatsapp';
+                break;
+            case 'voice':
+                channelIcon = 'fa-phone';
+                break;
+            case 'sms':
+                channelIcon = 'fa-sms';
+                break;
+            case 'email':
+                channelIcon = 'fa-envelope';
+                break;
+            default:
+                channelIcon = 'fa-comment';
+        }
+        
+        conversationInfo.innerHTML = `
+            <div class="conversation-lead-info">
+                <h3>${leadName}</h3>
+                <p>
+                    ${leadCompany ? `${leadCompany} • ` : ''}
+                    <i class="fas ${channelIcon}"></i> ${this.getChannelLabel(this.currentConversation.channel)}
+                </p>
+            </div>
             <div class="conversation-actions">
-              <button class="btn btn-sm btn-outline" id="filter-conversations" title="Filter">
-                <i data-feather="filter"></i>
-              </button>
-              
-              <button class="btn btn-sm btn-primary" id="new-conversation" title="New Conversation">
-                <i data-feather="plus"></i>
-              </button>
+                <button class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-phone"></i> Ligar
+                </button>
+                <button class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-user-edit"></i> Editar Lead
+                </button>
             </div>
-          </div>
-          
-          <div class="conversation-list">
-            ${this.renderConversationList()}
-          </div>
-        </div>
-        
-        <!-- Conversation Main Area -->
-        <div class="conversation-main">
-          ${this.currentConversation ? this.renderConversationContent() : this.renderEmptyConversation()}
-        </div>
-      </div>
-    `;
-    
-    // Initialize feather icons
-    feather.replace();
-    
-    // Set up event listeners
-    this.setupEventListeners();
-    
-    // Scroll to bottom of messages if a conversation is active
-    if (this.currentConversation) {
-      const messagesContainer = document.querySelector('.conversation-messages');
-      if (messagesContainer) {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }
-    }
-  }
-  
-  /**
-   * Render conversation list
-   */
-  renderConversationList() {
-    if (this.isLoading) {
-      return `
-        <div class="loading-container">
-          <div class="spinner-sm"></div>
-          <p>Loading...</p>
-        </div>
-      `;
+        `;
     }
     
-    if (!this.conversations || this.conversations.length === 0) {
-      return `
-        <div class="empty-list">
-          <i data-feather="message-circle" style="width: 24px; height: 24px; color: var(--text-secondary);"></i>
-          <p>No conversations found</p>
-          <p class="empty-list-subtitle">Start a new conversation using the button above</p>
-        </div>
-      `;
-    }
-    
-    return this.conversations.map(conversation => `
-      <div class="conversation-item ${this.currentConversation?.id === conversation.id ? 'active' : ''}" data-conversation-id="${conversation.id}">
-        <div class="conversation-item-header">
-          <div class="conversation-contact">${conversation.contactName || 'Unknown'}</div>
-          <div class="conversation-time">${this.formatTime(conversation.lastActivityAt)}</div>
-        </div>
-        <div class="conversation-preview">
-          ${conversation.lastMessage ? this.truncateText(conversation.lastMessage, 50) : 'No messages'}
-        </div>
-        <div class="conversation-meta">
-          <span class="conversation-channel">
-            <i data-feather="${this.getChannelIcon(conversation.channel)}"></i>
-            ${conversation.channel}
-          </span>
-          ${conversation.isNew ? '<span class="conversation-new">New</span>' : ''}
-        </div>
-      </div>
-    `).join('');
-  }
-  
-  /**
-   * Render conversation content
-   */
-  renderConversationContent() {
-    return `
-      <div class="conversation-header">
-        <div class="conversation-info">
-          <div class="conversation-contact-name">${this.currentConversation.contactName || 'Unknown'}</div>
-          <div class="conversation-status">${this.currentConversation.status}</div>
-        </div>
-        
-        <div class="conversation-tools">
-          <button class="btn btn-sm btn-outline" id="call-contact" title="Call">
-            <i data-feather="phone"></i>
-          </button>
-          
-          <button class="btn btn-sm btn-outline" id="contact-info" title="Contact Info">
-            <i data-feather="info"></i>
-          </button>
-          
-          <button class="btn btn-sm btn-outline" id="more-options" title="More Options">
-            <i data-feather="more-vertical"></i>
-          </button>
-        </div>
-      </div>
-      
-      <div class="conversation-messages">
-        ${this.renderMessages()}
-      </div>
-      
-      <div class="message-input">
-        <form class="message-form" id="message-form">
-          <input type="text" class="message-input-field" id="message-text" placeholder="Type your message...">
-          <button type="submit" class="message-send-btn">
-            <i data-feather="send"></i>
-          </button>
-        </form>
-      </div>
-    `;
-  }
-  
-  /**
-   * Render empty conversation state
-   */
-  renderEmptyConversation() {
-    return `
-      <div class="empty-conversation">
-        <div class="empty-state">
-          <i data-feather="message-square" style="width: 48px; height: 48px; color: var(--text-secondary);"></i>
-          <h3>No Conversation Selected</h3>
-          <p>Select a conversation from the list or start a new one</p>
-          <button class="btn btn-primary" id="start-new-conversation">
-            <i data-feather="plus"></i>
-            New Conversation
-          </button>
-        </div>
-      </div>
-    `;
-  }
-  
-  /**
-   * Render messages
-   */
-  renderMessages() {
-    if (this.isLoadingMessages) {
-      return `
-        <div class="loading-container">
-          <div class="spinner-sm"></div>
-          <p>Loading messages...</p>
-        </div>
-      `;
-    }
-    
-    if (!this.messages || this.messages.length === 0) {
-      return `
-        <div class="empty-messages">
-          <div class="empty-state">
-            <i data-feather="message-circle" style="width: 32px; height: 32px; color: var(--text-secondary);"></i>
-            <h3>No Messages Yet</h3>
-            <p>Start the conversation by sending a message</p>
-          </div>
-        </div>
-      `;
-    }
-    
-    return this.messages.map(message => `
-      <div class="message-item ${this.getMessageAlignment(message.senderType)}">
-        <div class="message-bubble">
-          ${message.content}
-        </div>
-        <div class="message-meta">
-          ${this.formatTime(message.createdAt)}
-        </div>
-      </div>
-    `).join('');
-  }
-  
-  /**
-   * Render new conversation modal
-   */
-  renderNewConversationModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.id = 'new-conversation-modal';
-    
-    modal.innerHTML = `
-      <div class="modal">
-        <div class="modal-header">
-          <h3 class="modal-title">New Conversation</h3>
-          <button class="modal-close" id="close-new-conversation">
-            <i data-feather="x"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <form id="new-conversation-form">
-            <div class="form-group">
-              <label for="contact-type" class="form-label">Contact Type</label>
-              <select class="form-select" id="contact-type">
-                <option value="existing">Existing Lead</option>
-                <option value="new">New Lead</option>
-              </select>
-            </div>
+    /**
+     * Load messages
+     */
+    async loadMessages(conversationId) {
+        try {
+            const messagesContainer = document.getElementById('conversation-messages');
             
-            <div id="existing-lead-form">
-              <div class="form-group">
-                <label for="lead-select" class="form-label">Select Lead</label>
-                <select class="form-select" id="lead-select">
-                  <option value="">-- Select a Lead --</option>
-                  <!-- Leads will be populated dynamically -->
-                </select>
-              </div>
-            </div>
+            if (!messagesContainer) return;
             
-            <div id="new-lead-form" style="display: none;">
-              <div class="form-group">
-                <label for="lead-name" class="form-label">Name *</label>
-                <input type="text" id="lead-name" class="form-control" required>
-              </div>
-              
-              <div class="form-group">
-                <label for="lead-company" class="form-label">Company</label>
-                <input type="text" id="lead-company" class="form-control">
-              </div>
-              
-              <div class="form-group">
-                <label for="lead-email" class="form-label">Email</label>
-                <input type="email" id="lead-email" class="form-control">
-              </div>
-              
-              <div class="form-group">
-                <label for="lead-phone" class="form-label">Phone</label>
-                <input type="tel" id="lead-phone" class="form-control">
-              </div>
-            </div>
+            // Show loading
+            messagesContainer.innerHTML = `
+                <div class="text-center p-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            `;
             
-            <div class="form-group">
-              <label for="channel-select" class="form-label">Channel</label>
-              <select class="form-select" id="channel-select">
-                <option value="call">Voice Call</option>
-                <option value="sms">SMS</option>
-                <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-              </select>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" id="cancel-conversation-btn">Cancel</button>
-          <button class="btn btn-primary" id="start-conversation-btn">Start Conversation</button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Initialize feather icons
-    feather.replace();
-    
-    // Fetch leads for the select dropdown
-    this.fetchLeadsForSelect();
-    
-    // Set up event listeners
-    document.getElementById('close-new-conversation')?.addEventListener('click', () => {
-      modal.remove();
-    });
-    
-    document.getElementById('cancel-conversation-btn')?.addEventListener('click', () => {
-      modal.remove();
-    });
-    
-    document.getElementById('contact-type')?.addEventListener('change', (e) => {
-      const contactType = e.target.value;
-      
-      if (contactType === 'existing') {
-        document.getElementById('existing-lead-form').style.display = 'block';
-        document.getElementById('new-lead-form').style.display = 'none';
-      } else {
-        document.getElementById('existing-lead-form').style.display = 'none';
-        document.getElementById('new-lead-form').style.display = 'block';
-      }
-    });
-    
-    document.getElementById('start-conversation-btn')?.addEventListener('click', () => {
-      this.startNewConversation();
-    });
-  }
-  
-  /**
-   * Fetch leads for the select dropdown
-   */
-  async fetchLeadsForSelect() {
-    try {
-      const data = await this.apiService.get('/leads');
-      const leadSelect = document.getElementById('lead-select');
-      
-      if (!leadSelect || !data.leads) return;
-      
-      // Clear existing options except the first placeholder
-      while (leadSelect.options.length > 1) {
-        leadSelect.remove(1);
-      }
-      
-      // Add leads to the select
-      data.leads.forEach(lead => {
-        const option = document.createElement('option');
-        option.value = lead.id;
-        option.textContent = `${lead.name} - ${lead.company || 'No Company'}`;
-        leadSelect.appendChild(option);
-      });
-    } catch (error) {
-      console.error('Error fetching leads for select:', error);
-    }
-  }
-  
-  /**
-   * Start a new conversation
-   */
-  async startNewConversation() {
-    const contactType = document.getElementById('contact-type')?.value;
-    const channel = document.getElementById('channel-select')?.value;
-    
-    let leadId;
-    let leadData;
-    
-    if (contactType === 'existing') {
-      leadId = document.getElementById('lead-select')?.value;
-      
-      if (!leadId) {
-        alert('Please select a lead');
-        return;
-      }
-    } else {
-      // Create new lead
-      const name = document.getElementById('lead-name')?.value;
-      const company = document.getElementById('lead-company')?.value;
-      const email = document.getElementById('lead-email')?.value;
-      const phone = document.getElementById('lead-phone')?.value;
-      
-      if (!name) {
-        alert('Lead name is required');
-        return;
-      }
-      
-      leadData = {
-        name,
-        company,
-        email,
-        phone,
-        status: 'new'
-      };
+            // Load messages from store
+            const messages = await window.store.loadMessages(conversationId);
+            this.messages = messages;
+            
+            // Update messages container
+            this.updateMessagesContainer();
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        } catch (error) {
+            console.error('Error loading messages:', error);
+            
+            // Show error
+            const messagesContainer = document.getElementById('conversation-messages');
+            if (messagesContainer) {
+                messagesContainer.innerHTML = `
+                    <div class="text-center p-3 text-danger">
+                        <i class="fas fa-exclamation-circle"></i> Erro ao carregar mensagens. Tente novamente.
+                    </div>
+                `;
+            }
+        }
     }
     
-    try {
-      let conversation;
-      
-      if (contactType === 'existing') {
-        // Start conversation with existing lead
-        conversation = await this.apiService.post('/conversations', {
-          leadId,
-          channel
-        });
-      } else {
-        // Create lead and start conversation
-        conversation = await this.apiService.post('/conversations/with-new-lead', {
-          lead: leadData,
-          channel
-        });
-      }
-      
-      // Close modal
-      document.getElementById('new-conversation-modal')?.remove();
-      
-      // Update current conversation
-      this.currentConversation = conversation;
-      
-      // Fetch messages for the new conversation
-      await this.fetchMessages(conversation.id);
-      
-      // Refresh conversations list
-      await this.fetchConversations();
-      
-      // Re-render component
-      this.render(document.getElementById('view-container'));
-      
-      // If channel is call, start the call
-      if (channel === 'call') {
-        this.initiateCall(conversation.id, conversation.leadId);
-      }
-    } catch (error) {
-      console.error('Error starting new conversation:', error);
-      alert(`Failed to start conversation: ${error.message}`);
-    }
-  }
-  
-  /**
-   * Send a message
-   */
-  async sendMessage(content) {
-    if (!this.currentConversation || !content) return;
-    
-    try {
-      // Optimistically add message to UI
-      const tempMessageId = 'temp-' + Date.now();
-      const tempMessage = {
-        id: tempMessageId,
-        conversationId: this.currentConversation.id,
-        senderType: 'agent',
-        senderId: this.store.getState().user.id,
-        content,
-        messageType: 'text',
-        createdAt: new Date().toISOString()
-      };
-      
-      this.messages.push(tempMessage);
-      
-      // Update UI
-      const messagesContainer = document.querySelector('.conversation-messages');
-      if (messagesContainer) {
-        messagesContainer.innerHTML = this.renderMessages();
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      }
-      
-      // Send message to API
-      const response = await this.apiService.post(`/conversations/${this.currentConversation.id}/messages`, {
-        content,
-        messageType: 'text'
-      });
-      
-      // Replace temp message with actual message
-      const index = this.messages.findIndex(m => m.id === tempMessageId);
-      if (index !== -1) {
-        this.messages[index] = response.message;
-      }
-      
-      // Update conversation list
-      await this.fetchConversations();
-      
-      // Only update conversation list in UI, not the whole component
-      const conversationList = document.querySelector('.conversation-list');
-      if (conversationList) {
-        conversationList.innerHTML = this.renderConversationList();
+    /**
+     * Update messages container
+     */
+    updateMessagesContainer() {
+        const messagesContainer = document.getElementById('conversation-messages');
+        if (!messagesContainer) return;
         
-        // Re-attach event listeners
-        document.querySelectorAll('.conversation-item').forEach(item => {
-          item.addEventListener('click', () => {
-            const conversationId = item.dataset.conversationId;
-            this.selectConversation(conversationId);
-          });
+        if (!this.messages || this.messages.length === 0) {
+            messagesContainer.innerHTML = `
+                <div class="text-center p-3">
+                    <p>Nenhuma mensagem encontrada</p>
+                    <p class="text-muted small">Envie uma mensagem para iniciar a conversa</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Generate messages
+        let html = '';
+        this.messages.forEach(message => {
+            const isOutgoing = message.senderType === 'agent' || message.senderType === 'system';
+            
+            html += `
+                <div class="message ${isOutgoing ? 'outgoing' : 'incoming'}">
+                    <div class="message-sender">${this.getSenderLabel(message.senderType)}</div>
+                    <div class="message-content">${message.content}</div>
+                    <div class="message-time">${this.formatTime(message.createdAt)}</div>
+                </div>
+            `;
         });
         
-        // Initialize feather icons
-        feather.replace();
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Remove temp message on error
-      const tempMessageId = 'temp-' + Date.now();
-      this.messages = this.messages.filter(m => m.id !== tempMessageId);
-      
-      // Update UI
-      const messagesContainer = document.querySelector('.conversation-messages');
-      if (messagesContainer) {
-        messagesContainer.innerHTML = this.renderMessages();
-      }
-      
-      alert(`Failed to send message: ${error.message}`);
+        messagesContainer.innerHTML = html;
     }
-  }
-  
-  /**
-   * Initiate a call
-   */
-  async initiateCall(conversationId, leadId) {
-    try {
-      // Initiate call via API
-      const response = await this.apiService.post(`/calls/outbound`, {
-        conversationId,
-        leadId
-      });
-      
-      // Show call UI
-      this.showCallUI(response.callId);
-    } catch (error) {
-      console.error('Error initiating call:', error);
-      alert(`Failed to initiate call: ${error.message}`);
-    }
-  }
-  
-  /**
-   * Show call UI
-   */
-  showCallUI(callId) {
-    // TODO: Implement call UI
-    alert(`Call initiated (Call ID: ${callId})`);
-  }
-  
-  /**
-   * Select a conversation
-   */
-  async selectConversation(conversationId) {
-    if (!conversationId) return;
     
-    // Find conversation in list
-    const conversation = this.conversations.find(c => c.id === parseInt(conversationId));
-    if (!conversation) return;
-    
-    // Set current conversation
-    this.currentConversation = conversation;
-    
-    // Fetch messages for the conversation
-    await this.fetchMessages(conversationId);
-    
-    // Re-render the component
-    this.render(document.getElementById('view-container'));
-  }
-  
-  /**
-   * Set up event listeners
-   */
-  setupEventListeners() {
-    // Conversation list items
-    document.querySelectorAll('.conversation-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const conversationId = item.dataset.conversationId;
-        this.selectConversation(conversationId);
-      });
-    });
-    
-    // New conversation button
-    document.getElementById('new-conversation')?.addEventListener('click', () => {
-      this.renderNewConversationModal();
-    });
-    
-    // Start new conversation button (empty state)
-    document.getElementById('start-new-conversation')?.addEventListener('click', () => {
-      this.renderNewConversationModal();
-    });
-    
-    // Message form
-    document.getElementById('message-form')?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      const messageInput = document.getElementById('message-text');
-      const content = messageInput.value.trim();
-      
-      if (content) {
-        this.sendMessage(content);
-        messageInput.value = '';
-      }
-    });
-    
-    // Call contact button
-    document.getElementById('call-contact')?.addEventListener('click', () => {
-      if (this.currentConversation) {
-        this.initiateCall(this.currentConversation.id, this.currentConversation.leadId);
-      }
-    });
-    
-    // Filter conversations button
-    document.getElementById('filter-conversations')?.addEventListener('click', () => {
-      this.showFilterModal();
-    });
-    
-    // Conversation search input
-    document.getElementById('conversation-search')?.addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
-        this.filter.searchQuery = e.target.value;
+    /**
+     * Send message
+     */
+    async sendMessage() {
+        if (!this.currentConversation) return;
         
-        this.fetchConversations().then(() => {
-          this.render(document.getElementById('view-container'));
-        });
-      }
-    });
-  }
-  
-  /**
-   * Show filter modal
-   */
-  showFilterModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.id = 'filter-modal';
-    
-    modal.innerHTML = `
-      <div class="modal">
-        <div class="modal-header">
-          <h3 class="modal-title">Filter Conversations</h3>
-          <button class="modal-close" id="close-filter-modal">
-            <i data-feather="x"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <form id="filter-form">
-            <div class="form-group">
-              <label for="filter-status" class="form-label">Status</label>
-              <select class="form-select" id="filter-status">
-                <option value="all" ${this.filter.status === 'all' ? 'selected' : ''}>All Statuses</option>
-                <option value="active" ${this.filter.status === 'active' ? 'selected' : ''}>Active</option>
-                <option value="closed" ${this.filter.status === 'closed' ? 'selected' : ''}>Closed</option>
-              </select>
-            </div>
+        // Get message input
+        const messageInput = document.getElementById('message-input');
+        if (!messageInput) return;
+        
+        // Get message content
+        const content = messageInput.value.trim();
+        if (!content) return;
+        
+        try {
+            // Clear input
+            messageInput.value = '';
             
-            <div class="form-group">
-              <label for="filter-channel" class="form-label">Channel</label>
-              <select class="form-select" id="filter-channel">
-                <option value="all" ${this.filter.channel === 'all' ? 'selected' : ''}>All Channels</option>
-                <option value="call" ${this.filter.channel === 'call' ? 'selected' : ''}>Call</option>
-                <option value="sms" ${this.filter.channel === 'sms' ? 'selected' : ''}>SMS</option>
-                <option value="email" ${this.filter.channel === 'email' ? 'selected' : ''}>Email</option>
-                <option value="whatsapp" ${this.filter.channel === 'whatsapp' ? 'selected' : ''}>WhatsApp</option>
-              </select>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" id="reset-filters-btn">Reset Filters</button>
-          <button class="btn btn-primary" id="apply-filters-btn">Apply Filters</button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Initialize feather icons
-    feather.replace();
-    
-    // Set up event listeners
-    document.getElementById('close-filter-modal')?.addEventListener('click', () => {
-      modal.remove();
-    });
-    
-    document.getElementById('reset-filters-btn')?.addEventListener('click', () => {
-      document.getElementById('filter-status').value = 'all';
-      document.getElementById('filter-channel').value = 'all';
-    });
-    
-    document.getElementById('apply-filters-btn')?.addEventListener('click', () => {
-      this.filter.status = document.getElementById('filter-status').value;
-      this.filter.channel = document.getElementById('filter-channel').value;
-      
-      this.fetchConversations().then(() => {
-        this.render(document.getElementById('view-container'));
-        modal.remove();
-      });
-    });
-  }
-  
-  /**
-   * Get message alignment based on sender type
-   */
-  getMessageAlignment(senderType) {
-    return (senderType === 'agent' || senderType === 'system') ? 'outgoing' : 'incoming';
-  }
-  
-  /**
-   * Get icon for channel type
-   */
-  getChannelIcon(channel) {
-    switch (channel) {
-      case 'call':
-        return 'phone';
-      case 'sms':
-        return 'message-square';
-      case 'email':
-        return 'mail';
-      case 'whatsapp':
-        return 'message-circle';
-      default:
-        return 'message-square';
+            // Send message
+            await window.store.sendMessage(this.currentConversation.id, content);
+            
+            // Scroll to bottom
+            const messagesContainer = document.getElementById('conversation-messages');
+            if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            window.store.setNotification('Erro ao enviar mensagem', 'danger');
+        }
     }
-  }
-  
-  /**
-   * Format time for display
-   */
-  formatTime(dateString) {
-    if (!dateString) return '-';
     
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffSeconds = Math.floor(diffMs / 1000);
-    
-    if (diffSeconds < 60) {
-      return 'just now';
-    } else if (diffSeconds < 3600) {
-      const minutes = Math.floor(diffSeconds / 60);
-      return `${minutes}m ago`;
-    } else if (diffSeconds < 86400) {
-      const hours = Math.floor(diffSeconds / 3600);
-      return `${hours}h ago`;
-    } else if (diffSeconds < 604800) {
-      const days = Math.floor(diffSeconds / 86400);
-      return `${days}d ago`;
-    } else {
-      return date.toLocaleDateString();
+    /**
+     * Format date
+     */
+    formatDate(dateString) {
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+            // Today
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays === 1) {
+            // Yesterday
+            return 'Ontem';
+        } else if (diffDays < 7) {
+            // This week
+            const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            return days[date.getDay()];
+        } else {
+            // Earlier
+            return date.toLocaleDateString();
+        }
     }
-  }
-  
-  /**
-   * Truncate text to specified length
-   */
-  truncateText(text, maxLength) {
-    if (!text || text.length <= maxLength) return text;
-    return text.substr(0, maxLength) + '...';
-  }
+    
+    /**
+     * Format time
+     */
+    formatTime(dateString) {
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    /**
+     * Get channel label
+     */
+    getChannelLabel(channel) {
+        switch (channel) {
+            case 'whatsapp':
+                return 'WhatsApp';
+            case 'voice':
+                return 'Voz';
+            case 'sms':
+                return 'SMS';
+            case 'email':
+                return 'Email';
+            default:
+                return channel;
+        }
+    }
+    
+    /**
+     * Get sender label
+     */
+    getSenderLabel(senderType) {
+        switch (senderType) {
+            case 'agent':
+                return 'Agente';
+            case 'lead':
+                return 'Lead';
+            case 'system':
+                return 'Sistema';
+            case 'ai':
+                return 'IA';
+            default:
+                return senderType;
+        }
+    }
 }
+
+// Export the conversations component
+window.Conversations = new Conversations();

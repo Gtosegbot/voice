@@ -2,32 +2,41 @@
 VoiceAI Platform - Main application package
 """
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from backend.models.db import db
-import os
+from backend.api.auth import auth_bp
+from backend.api.leads import leads_bp
+from backend.api.conversations import conversations_bp
 
 def create_app():
     """Create Flask application"""
     app = Flask(__name__)
     
-    # Configure the database
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # Load configuration
+    app.config.from_mapping(
+        SECRET_KEY='voiceai-secret',
+        SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL'),
+        SQLALCHEMY_TRACK_MODIFICATIONS=False
+    )
     
-    # Enable CORS
+    # Initialize CORS
     CORS(app)
     
     # Initialize database
     db.init_app(app)
     
     # Register blueprints
-    from backend.api.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(leads_bp, url_prefix='/api/leads')
+    app.register_blueprint(conversations_bp, url_prefix='/api/conversations')
     
-    # Create a route for testing
-    @app.route('/api/health')
+    # Health check endpoint
+    @app.route('/health')
     def health_check():
-        return {'status': 'ok', 'message': 'VoiceAI Platform API is running'}
+        return jsonify({'status': 'healthy'}), 200
     
     return app
+
+# Add missing import
+import os
