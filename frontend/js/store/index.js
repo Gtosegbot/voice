@@ -1,36 +1,99 @@
 /**
- * Store for application state management
+ * Store
+ * A simple state management system for the application
  */
 
 class Store {
     constructor() {
-        // Application state
         this.state = {
-            currentUser: null,
+            // User data
+            user: null,
             isAuthenticated: false,
+            
+            // Navigation state
+            currentPage: 'dashboard',
+            sidebarCollapsed: false,
+            
+            // Data collections
             leads: [],
-            leadsPagination: {
-                page: 1,
-                perPage: 10,
-                total: 0,
-                pages: 0
-            },
             conversations: [],
+            campaigns: [],
+            flows: [],
+            
+            // Pagination and filtering
+            pagination: {
+                leads: {
+                    page: 1,
+                    totalPages: 1,
+                    totalItems: 0,
+                    itemsPerPage: 10
+                },
+                conversations: {
+                    page: 1,
+                    totalPages: 1,
+                    totalItems: 0,
+                    itemsPerPage: 10
+                }
+            },
+            
+            // Filters
+            filters: {
+                leads: {
+                    status: 'all',
+                    search: '',
+                    sortBy: 'created_at',
+                    sortOrder: 'desc'
+                },
+                conversations: {
+                    status: 'all',
+                    search: '',
+                    sortBy: 'last_activity_at',
+                    sortOrder: 'desc'
+                }
+            },
+            
+            // Current active items
+            currentLead: null,
             currentConversation: null,
-            messages: [],
+            currentCampaign: null,
+            currentFlow: null,
+            
+            // Call state
             activeCall: null,
-            notification: null
+            callTranscript: [],
+            callInsights: null,
+            
+            // UI state
+            loading: {},
+            errors: {},
+            notifications: []
         };
         
-        // State change listeners
         this.listeners = [];
-        
-        // Load authentication state
-        this.loadAuthState();
     }
     
     /**
-     * Subscribe to state changes
+     * Get the current state
+     * @returns {object} Current state
+     */
+    getState() {
+        return this.state;
+    }
+    
+    /**
+     * Update the state
+     * @param {function} updater - Function that receives current state and returns updated state
+     */
+    setState(updater) {
+        const newState = updater(this.state);
+        this.state = { ...this.state, ...newState };
+        this.notifyListeners();
+    }
+    
+    /**
+     * Register a listener for state changes
+     * @param {function} listener - Listener function
+     * @returns {function} Function to unregister the listener
      */
     subscribe(listener) {
         this.listeners.push(listener);
@@ -42,255 +105,303 @@ class Store {
     }
     
     /**
-     * Update state
-     */
-    setState(newState) {
-        this.state = {
-            ...this.state,
-            ...newState
-        };
-        
-        // Notify listeners
-        this.notifyListeners();
-    }
-    
-    /**
-     * Notify listeners of state change
+     * Notify all listeners of state changes
      */
     notifyListeners() {
-        for (const listener of this.listeners) {
-            listener(this.state);
-        }
+        this.listeners.forEach(listener => listener(this.state));
+    }
+    
+    // State updaters
+    
+    /**
+     * Set the current user
+     * @param {object} user - User data
+     */
+    setUser(user) {
+        this.setState(state => ({
+            user,
+            isAuthenticated: !!user
+        }));
     }
     
     /**
-     * Load authentication state from local storage
+     * Set the authentication state
+     * @param {boolean} isAuthenticated - Whether the user is authenticated
      */
-    loadAuthState() {
-        const token = ApiService.getAuthToken();
+    setAuthenticated(isAuthenticated) {
+        this.setState(state => ({ isAuthenticated }));
+    }
+    
+    /**
+     * Navigate to a page
+     * @param {string} page - Page name
+     */
+    navigateTo(page) {
+        this.setState(state => ({ currentPage: page }));
+    }
+    
+    /**
+     * Toggle the sidebar
+     */
+    toggleSidebar() {
+        this.setState(state => ({ sidebarCollapsed: !state.sidebarCollapsed }));
+    }
+    
+    /**
+     * Set leads data
+     * @param {array} leads - Leads data
+     * @param {object} pagination - Pagination data
+     */
+    setLeads(leads, pagination = null) {
+        const update = { leads };
         
-        if (token) {
-            this.setState({
-                isAuthenticated: true
-            });
-            
-            // Load user data
-            this.loadUserData();
-        }
-    }
-    
-    /**
-     * Load user data from API
-     */
-    async loadUserData() {
-        try {
-            const userData = await ApiService.getCurrentUser();
-            
-            this.setState({
-                currentUser: userData.user,
-                isAuthenticated: true
-            });
-            
-            return userData.user;
-        } catch (error) {
-            console.error('Error loading user data:', error);
-            // Clear auth if token is invalid
-            this.clearAuth();
-            return null;
-        }
-    }
-    
-    /**
-     * Login user
-     */
-    async login(email, password) {
-        try {
-            const data = await ApiService.login(email, password);
-            
-            this.setState({
-                currentUser: data.user,
-                isAuthenticated: true
-            });
-            
-            return data.user;
-        } catch (error) {
-            throw error;
-        }
-    }
-    
-    /**
-     * Register user
-     */
-    async register(name, email, password) {
-        try {
-            const data = await ApiService.register(name, email, password);
-            
-            this.setState({
-                currentUser: data.user,
-                isAuthenticated: true
-            });
-            
-            return data.user;
-        } catch (error) {
-            throw error;
-        }
-    }
-    
-    /**
-     * Logout user
-     */
-    async logout() {
-        try {
-            await ApiService.logout();
-        } catch (error) {
-            console.error('Error logging out:', error);
+        if (pagination) {
+            update.pagination = {
+                ...this.state.pagination,
+                leads: pagination
+            };
         }
         
-        this.clearAuth();
+        this.setState(state => update);
     }
     
     /**
-     * Clear authentication state
+     * Set conversations data
+     * @param {array} conversations - Conversations data
+     * @param {object} pagination - Pagination data
      */
-    clearAuth() {
-        ApiService.clearAuthToken();
+    setConversations(conversations, pagination = null) {
+        const update = { conversations };
         
-        this.setState({
-            currentUser: null,
-            isAuthenticated: false
-        });
+        if (pagination) {
+            update.pagination = {
+                ...this.state.pagination,
+                conversations: pagination
+            };
+        }
+        
+        this.setState(state => update);
     }
     
     /**
-     * Set notification
+     * Set the current lead
+     * @param {object} lead - Lead data
      */
-    setNotification(message, type = 'info', duration = 5000) {
-        const notification = {
-            id: Date.now(),
-            message,
-            type,
-            timestamp: new Date()
-        };
-        
-        this.setState({
-            notification
-        });
-        
-        // Auto-clear notification
-        if (duration > 0) {
-            setTimeout(() => {
-                if (this.state.notification && this.state.notification.id === notification.id) {
-                    this.setState({
-                        notification: null
-                    });
+    setCurrentLead(lead) {
+        this.setState(state => ({ currentLead: lead }));
+    }
+    
+    /**
+     * Set the current conversation
+     * @param {object} conversation - Conversation data
+     */
+    setCurrentConversation(conversation) {
+        this.setState(state => ({ currentConversation: conversation }));
+    }
+    
+    /**
+     * Set the campaigns data
+     * @param {array} campaigns - Campaigns data
+     */
+    setCampaigns(campaigns) {
+        this.setState(state => ({ campaigns }));
+    }
+    
+    /**
+     * Set the current campaign
+     * @param {object} campaign - Campaign data
+     */
+    setCurrentCampaign(campaign) {
+        this.setState(state => ({ currentCampaign: campaign }));
+    }
+    
+    /**
+     * Set the flows data
+     * @param {array} flows - Flows data
+     */
+    setFlows(flows) {
+        this.setState(state => ({ flows }));
+    }
+    
+    /**
+     * Set the current flow
+     * @param {object} flow - Flow data
+     */
+    setCurrentFlow(flow) {
+        this.setState(state => ({ currentFlow: flow }));
+    }
+    
+    /**
+     * Set the filters for a collection
+     * @param {string} collection - Collection name (leads, conversations)
+     * @param {object} filters - Filters data
+     */
+    setFilters(collection, filters) {
+        this.setState(state => ({
+            filters: {
+                ...state.filters,
+                [collection]: {
+                    ...state.filters[collection],
+                    ...filters
                 }
-            }, duration);
-        }
-        
-        return notification;
+            }
+        }));
     }
     
     /**
-     * Clear notification
-     */
-    clearNotification() {
-        this.setState({
-            notification: null
-        });
-    }
-    
-    /**
-     * Load leads
-     */
-    async loadLeads(params = {}) {
-        try {
-            const data = await ApiService.getLeads(params);
-            
-            this.setState({
-                leads: data.leads,
-                leadsPagination: data.pagination
-            });
-            
-            return data;
-        } catch (error) {
-            console.error('Error loading leads:', error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Load conversations
-     */
-    async loadConversations(params = {}) {
-        try {
-            const data = await ApiService.getConversations(params);
-            
-            this.setState({
-                conversations: data.conversations
-            });
-            
-            return data.conversations;
-        } catch (error) {
-            console.error('Error loading conversations:', error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Load conversation messages
-     */
-    async loadMessages(conversationId) {
-        try {
-            const data = await ApiService.getMessages(conversationId);
-            
-            this.setState({
-                messages: data.messages
-            });
-            
-            return data.messages;
-        } catch (error) {
-            console.error('Error loading messages:', error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Send message
-     */
-    async sendMessage(conversationId, content, messageType = 'text') {
-        try {
-            const data = await ApiService.sendMessage(conversationId, content, messageType);
-            
-            // Add message to state
-            this.setState({
-                messages: [...this.state.messages, data.message]
-            });
-            
-            return data.message;
-        } catch (error) {
-            console.error('Error sending message:', error);
-            throw error;
-        }
-    }
-    
-    /**
-     * Set active call
+     * Set the active call data
+     * @param {object} call - Call data
      */
     setActiveCall(call) {
-        this.setState({
-            activeCall: call
-        });
+        this.setState(state => ({ activeCall: call }));
     }
     
     /**
-     * Clear active call
+     * Add a message to the call transcript
+     * @param {object} message - Transcript message
      */
-    clearActiveCall() {
-        this.setState({
-            activeCall: null
-        });
+    addCallTranscript(message) {
+        this.setState(state => ({
+            callTranscript: [...state.callTranscript, message]
+        }));
+    }
+    
+    /**
+     * Set the call insights
+     * @param {object} insights - Call insights data
+     */
+    setCallInsights(insights) {
+        this.setState(state => ({ callInsights: insights }));
+    }
+    
+    /**
+     * Set the loading state for a key
+     * @param {string} key - Loading key
+     * @param {boolean} isLoading - Whether the key is loading
+     */
+    setLoading(key, isLoading) {
+        this.setState(state => ({
+            loading: {
+                ...state.loading,
+                [key]: isLoading
+            }
+        }));
+    }
+    
+    /**
+     * Set the error for a key
+     * @param {string} key - Error key
+     * @param {string|null} error - Error message or null to clear
+     */
+    setError(key, error) {
+        this.setState(state => ({
+            errors: {
+                ...state.errors,
+                [key]: error
+            }
+        }));
+    }
+    
+    /**
+     * Add a notification
+     * @param {object} notification - Notification object
+     */
+    addNotification(notification) {
+        const id = Date.now();
+        
+        this.setState(state => ({
+            notifications: [
+                ...state.notifications,
+                { 
+                    id,
+                    ...notification,
+                    timestamp: new Date()
+                }
+            ]
+        }));
+        
+        // Auto-dismiss notification after timeout
+        if (notification.autoDismiss !== false) {
+            setTimeout(() => {
+                this.dismissNotification(id);
+            }, notification.timeout || 5000);
+        }
+        
+        return id;
+    }
+    
+    /**
+     * Dismiss a notification
+     * @param {number} id - Notification ID
+     */
+    dismissNotification(id) {
+        this.setState(state => ({
+            notifications: state.notifications.filter(n => n.id !== id)
+        }));
+    }
+    
+    /**
+     * Reset the store to its initial state
+     */
+    reset() {
+        this.setState(() => this.getInitialState());
+    }
+    
+    /**
+     * Get the initial state
+     * @returns {object} Initial state
+     */
+    getInitialState() {
+        return {
+            user: null,
+            isAuthenticated: false,
+            currentPage: 'dashboard',
+            sidebarCollapsed: false,
+            leads: [],
+            conversations: [],
+            campaigns: [],
+            flows: [],
+            pagination: {
+                leads: {
+                    page: 1,
+                    totalPages: 1,
+                    totalItems: 0,
+                    itemsPerPage: 10
+                },
+                conversations: {
+                    page: 1,
+                    totalPages: 1,
+                    totalItems: 0,
+                    itemsPerPage: 10
+                }
+            },
+            filters: {
+                leads: {
+                    status: 'all',
+                    search: '',
+                    sortBy: 'created_at',
+                    sortOrder: 'desc'
+                },
+                conversations: {
+                    status: 'all',
+                    search: '',
+                    sortBy: 'last_activity_at',
+                    sortOrder: 'desc'
+                }
+            },
+            currentLead: null,
+            currentConversation: null,
+            currentCampaign: null,
+            currentFlow: null,
+            activeCall: null,
+            callTranscript: [],
+            callInsights: null,
+            loading: {},
+            errors: {},
+            notifications: []
+        };
     }
 }
 
-// Create global store instance
-window.store = new Store();
+// Create and export a singleton instance
+const store = new Store();
