@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceAI Platform - Redirecionando...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+        .loading {
+            margin-bottom: 20px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-left-color: #4e73df;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script>
+        // Redirecionar para o frontend após carregamento
+        window.onload = function() {
+            setTimeout(function() {
+                window.location.href = 'frontend/index.html';
+            }, 1000);  // Redirecionamento após 1 segundo
+        };
+    </script>
+</head>
+<body>
+    <div class="loading">
+        <div class="spinner"></div>
+    </div>
+    <h2>Carregando Plataforma VoiceAI...</h2>
+    <p>Você será redirecionado automaticamente.</p>
+</body>
+</html>
