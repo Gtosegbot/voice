@@ -8,6 +8,8 @@ from backend.models.db import db
 from backend.api.auth import auth_bp
 from backend.api.leads import leads_bp
 from backend.api.conversations import conversations_bp
+from backend.api.callbacks import callbacks_bp
+from backend.api.ai import elevenlabs_bp
 
 def create_app():
     """Create Flask application"""
@@ -30,6 +32,8 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(leads_bp, url_prefix='/api/leads')
     app.register_blueprint(conversations_bp, url_prefix='/api/conversations')
+    app.register_blueprint(callbacks_bp, url_prefix='/api/callbacks')
+    app.register_blueprint(elevenlabs_bp)
     
     # Health check endpoint
     @app.route('/health')

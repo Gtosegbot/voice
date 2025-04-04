@@ -7,6 +7,9 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+# Define callback types for relationship references before class declaration
+callbacks_backref = None
+
 class User(db.Model):
     """User model for authentication and user management"""
     __tablename__ = 'users'
@@ -298,4 +301,72 @@ class Setting(db.Model):
             'value': self.value,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class Callback(db.Model):
+    """Callback model for scheduled return calls"""
+    __tablename__ = 'callbacks'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    lead_id = db.Column(db.Integer, db.ForeignKey('leads.id'), nullable=False)
+    agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    scheduled_at = db.Column(db.DateTime, nullable=False)
+    notes = db.Column(db.Text)
+    status = db.Column(db.String(50), default='scheduled')  # scheduled, completed, missed, canceled
+    call_id = db.Column(db.Integer, db.ForeignKey('calls.id'))  # Associated call if any
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    lead = db.relationship('Lead', backref='callbacks', lazy=True)
+    agent = db.relationship('User', backref='callbacks', lazy=True)
+    reminders = db.relationship('Reminder', backref='callback', lazy=True)
+    
+    def to_dict(self):
+        """Convert instance to dictionary"""
+        return {
+            'id': self.id,
+            'lead_id': self.lead_id,
+            'lead': self.lead.to_dict() if self.lead else None,
+            'agent_id': self.agent_id,
+            'agent': {
+                'id': self.agent.id,
+                'name': self.agent.name,
+                'email': self.agent.email
+            } if self.agent else None,
+            'scheduled_at': self.scheduled_at.isoformat() if self.scheduled_at else None,
+            'notes': self.notes,
+            'status': self.status,
+            'call_id': self.call_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'reminders': [r.to_dict() for r in self.reminders] if self.reminders else []
+        }
+
+
+class Reminder(db.Model):
+    """Reminder model for callback notifications"""
+    __tablename__ = 'reminders'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    callback_id = db.Column(db.Integer, db.ForeignKey('callbacks.id'), nullable=False)
+    reminder_time = db.Column(db.DateTime, nullable=False)
+    channel = db.Column(db.String(50), nullable=False)  # whatsapp, sms, email
+    status = db.Column(db.String(50), default='pending')  # pending, sent, failed, canceled
+    error = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        """Convert instance to dictionary"""
+        return {
+            'id': self.id,
+            'callback_id': self.callback_id,
+            'reminder_time': self.reminder_time.isoformat() if self.reminder_time else None,
+            'channel': self.channel,
+            'status': self.status,
+            'error': self.error,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

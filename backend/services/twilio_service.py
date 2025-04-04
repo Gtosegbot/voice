@@ -1,184 +1,240 @@
 """
-Twilio service for the VoiceAI platform
+Twilio service for SMS and WhatsApp integration with VoiceAI platform
 """
 
 import os
-from twilio.rest import Client
 from flask import current_app
+from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 
-# Twilio credentials from environment variables
-TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
-TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
-
-def get_twilio_client():
-    """Get Twilio client instance"""
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
-        current_app.logger.error('Twilio credentials not found')
-        return None
+def get_twilio_credentials():
+    """Get Twilio credentials from environment or settings"""
+    account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
+    auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
+    phone_number = os.environ.get('TWILIO_PHONE_NUMBER')
     
-    return Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    # If not available in environment, try to get from settings database
+    if not (account_sid and auth_token and phone_number):
+        try:
+            from backend.models.db import Setting
+            
+            if not account_sid:
+                setting = Setting.query.filter_by(category='telephony', key='twilio_account_sid').first()
+                if setting:
+                    account_sid = setting.value
+                    
+            if not auth_token:
+                setting = Setting.query.filter_by(category='telephony', key='twilio_auth_token').first()
+                if setting:
+                    auth_token = setting.value
+                    
+            if not phone_number:
+                setting = Setting.query.filter_by(category='telephony', key='twilio_phone_number').first()
+                if setting:
+                    phone_number = setting.value
+        except:
+            current_app.logger.error("Failed to get Twilio credentials from settings")
+    
+    return account_sid, auth_token, phone_number
 
 def send_sms(to_number, message):
-    """Send SMS message using Twilio"""
-    client = get_twilio_client()
+    """
+    Send SMS message via Twilio
     
-    if not client:
-        return {
-            'success': False,
-            'error': 'Twilio client not initialized'
-        }
+    Args:
+        to_number: Recipient phone number (with country code)
+        message: Message text to send
+        
+    Returns:
+        tuple: (success, message_sid or error)
+    """
+    account_sid, auth_token, from_number = get_twilio_credentials()
     
-    if not TWILIO_PHONE_NUMBER:
-        return {
-            'success': False,
-            'error': 'Twilio phone number not configured'
-        }
+    if not (account_sid and auth_token and from_number):
+        error = "Twilio credentials not configured"
+        current_app.logger.error(error)
+        return False, error
     
     try:
-        # Send message
+        # Format phone number if needed (ensure it has + and country code)
+        if not to_number.startswith('+'):
+            # Assume Brazilian number if no country code
+            if to_number.startswith('0'):
+                to_number = '+55' + to_number[1:]
+            else:
+                to_number = '+55' + to_number
+        
+        # Initialize Twilio client
+        client = Client(account_sid, auth_token)
+        
+        # Send SMS
         message = client.messages.create(
             body=message,
-            from_=TWILIO_PHONE_NUMBER,
+            from_=from_number,
             to=to_number
         )
         
-        return {
-            'success': True,
-            'sid': message.sid
-        }
+        current_app.logger.info(f"SMS sent to {to_number}: {message.sid}")
+        return True, message.sid
+        
     except TwilioRestException as e:
-        current_app.logger.error(f'Twilio error: {str(e)}')
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        error = f"Twilio error: {e.code} - {e.msg}"
+        current_app.logger.error(error)
+        return False, error
     except Exception as e:
-        current_app.logger.error(f'Error sending SMS: {str(e)}')
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        error = f"Failed to send SMS: {str(e)}"
+        current_app.logger.error(error)
+        return False, error
 
-def make_call(to_number, url=None, twiml=None):
-    """Make a phone call using Twilio"""
-    client = get_twilio_client()
+def send_whatsapp(to_number, message):
+    """
+    Send WhatsApp message via Twilio
     
-    if not client:
-        return {
-            'success': False,
-            'error': 'Twilio client not initialized'
-        }
+    Args:
+        to_number: Recipient phone number (with country code)
+        message: Message text to send
+        
+    Returns:
+        tuple: (success, message_sid or error)
+    """
+    account_sid, auth_token, from_number = get_twilio_credentials()
     
-    if not TWILIO_PHONE_NUMBER:
-        return {
-            'success': False,
-            'error': 'Twilio phone number not configured'
-        }
+    if not (account_sid and auth_token and from_number):
+        error = "Twilio credentials not configured"
+        current_app.logger.error(error)
+        return False, error
     
     try:
-        call_params = {
-            'to': to_number,
-            'from_': TWILIO_PHONE_NUMBER
-        }
+        # Format phone number if needed (ensure it has + and country code)
+        if not to_number.startswith('+'):
+            # Assume Brazilian number if no country code
+            if to_number.startswith('0'):
+                to_number = '+55' + to_number[1:]
+            else:
+                to_number = '+55' + to_number
         
-        # Use either URL or TwiML
-        if url:
-            call_params['url'] = url
-        elif twiml:
-            call_params['twiml'] = twiml
-        else:
-            return {
-                'success': False,
-                'error': 'Either URL or TwiML required'
-            }
+        # Format WhatsApp number
+        whatsapp_from = f"whatsapp:{from_number}"
+        whatsapp_to = f"whatsapp:{to_number}"
+        
+        # Initialize Twilio client
+        client = Client(account_sid, auth_token)
+        
+        # Send WhatsApp message
+        message = client.messages.create(
+            body=message,
+            from_=whatsapp_from,
+            to=whatsapp_to
+        )
+        
+        current_app.logger.info(f"WhatsApp message sent to {to_number}: {message.sid}")
+        return True, message.sid
+        
+    except TwilioRestException as e:
+        error = f"Twilio error: {e.code} - {e.msg}"
+        current_app.logger.error(error)
+        return False, error
+    except Exception as e:
+        error = f"Failed to send WhatsApp message: {str(e)}"
+        current_app.logger.error(error)
+        return False, error
+
+def send_voice_message(to_number, message=None, twiml=None):
+    """
+    Initiate a voice call with a message or TwiML
+    
+    Args:
+        to_number: Recipient phone number (with country code)
+        message: Simple message to say (if TwiML not provided)
+        twiml: TwiML for more complex voice interactions
+        
+    Returns:
+        tuple: (success, call_sid or error)
+    """
+    account_sid, auth_token, from_number = get_twilio_credentials()
+    
+    if not (account_sid and auth_token and from_number):
+        error = "Twilio credentials not configured"
+        current_app.logger.error(error)
+        return False, error
+    
+    try:
+        # Format phone number if needed (ensure it has + and country code)
+        if not to_number.startswith('+'):
+            # Assume Brazilian number if no country code
+            if to_number.startswith('0'):
+                to_number = '+55' + to_number[1:]
+            else:
+                to_number = '+55' + to_number
+        
+        # Initialize Twilio client
+        client = Client(account_sid, auth_token)
+        
+        # If no TwiML provided, create simple one with message
+        if not twiml and message:
+            twiml = f"""
+            <Response>
+                <Say voice="woman" language="pt-BR">{message}</Say>
+            </Response>
+            """
         
         # Make call
-        call = client.calls.create(**call_params)
+        call = client.calls.create(
+            twiml=twiml,
+            to=to_number,
+            from_=from_number
+        )
         
-        return {
-            'success': True,
-            'sid': call.sid
-        }
+        current_app.logger.info(f"Voice call initiated to {to_number}: {call.sid}")
+        return True, call.sid
+        
     except TwilioRestException as e:
-        current_app.logger.error(f'Twilio error: {str(e)}')
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        error = f"Twilio error: {e.code} - {e.msg}"
+        current_app.logger.error(error)
+        return False, error
     except Exception as e:
-        current_app.logger.error(f'Error making call: {str(e)}')
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        error = f"Failed to initiate voice call: {str(e)}"
+        current_app.logger.error(error)
+        return False, error
 
-def get_call_status(call_sid):
-    """Get call status from Twilio"""
-    client = get_twilio_client()
+def check_twilio_configuration():
+    """Check if Twilio is properly configured"""
+    account_sid, auth_token, phone_number = get_twilio_credentials()
     
-    if not client:
-        return {
-            'success': False,
-            'error': 'Twilio client not initialized'
-        }
+    if not (account_sid and auth_token and phone_number):
+        return False, "Missing Twilio credentials"
     
     try:
-        call = client.calls(call_sid).fetch()
+        # Test client initialization
+        client = Client(account_sid, auth_token)
         
-        return {
-            'success': True,
-            'status': call.status,
-            'duration': call.duration,
-            'direction': call.direction,
-            'from': call.from_,
-            'to': call.to,
-            'started_at': call.start_time,
-            'ended_at': call.end_time
-        }
-    except TwilioRestException as e:
-        current_app.logger.error(f'Twilio error: {str(e)}')
-        return {
-            'success': False,
-            'error': str(e)
+        # Get account info
+        account = client.api.accounts(account_sid).fetch()
+        
+        return True, {
+            "status": account.status,
+            "friendly_name": account.friendly_name,
+            "phone_number": phone_number,
         }
     except Exception as e:
-        current_app.logger.error(f'Error getting call status: {str(e)}')
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        return False, f"Twilio configuration error: {str(e)}"
 
-def get_recording_url(recording_sid):
-    """Get recording URL from Twilio"""
-    client = get_twilio_client()
+def send_appointment_reminder(to_number, lead_name, appointment_datetime, agent_name, notes=None):
+    """
+    Send a formatted appointment reminder SMS
     
-    if not client:
-        return {
-            'success': False,
-            'error': 'Twilio client not initialized'
-        }
+    This is a higher-level function specifically for appointment reminders
+    """
+    # Format message
+    message = f"Olá {lead_name}, este é um lembrete para o nosso compromisso agendado para {appointment_datetime}."
     
-    try:
-        recording = client.recordings(recording_sid).fetch()
+    if agent_name:
+        message += f" Você falará com {agent_name}."
         
-        return {
-            'success': True,
-            'url': recording.uri,
-            'duration': recording.duration,
-            'channels': recording.channels,
-            'status': recording.status
-        }
-    except TwilioRestException as e:
-        current_app.logger.error(f'Twilio error: {str(e)}')
-        return {
-            'success': False,
-            'error': str(e)
-        }
-    except Exception as e:
-        current_app.logger.error(f'Error getting recording URL: {str(e)}')
-        return {
-            'success': False,
-            'error': str(e)
-        }
+    if notes:
+        message += f" Notas: {notes}"
+        
+    message += " Aguardamos seu contato!"
+    
+    # Send SMS
+    return send_sms(to_number, message)

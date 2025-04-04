@@ -53,6 +53,9 @@ function initApp() {
     // Initialize components based on current page
     initActivePage();
     
+    // Initialize onboarding component
+    initializeOnboarding();
+    
     // Set up Socket.IO connection (would normally connect to server)
     // socketService.init(token);
     
@@ -562,4 +565,26 @@ function logout() {
     
     // Show login page
     showLoginPage();
+}
+
+/**
+ * Initialize the onboarding component
+ */
+function initializeOnboarding() {
+    // Import onboarding module
+    const script = document.createElement('script');
+    script.src = '/js/components/Onboarding/Onboarding.js';
+    script.type = 'text/javascript';
+    document.head.appendChild(script);
+    
+    // Initialize the onboarding when the script is loaded
+    script.onload = function() {
+        if (typeof initOnboarding === 'function') {
+            setTimeout(() => {
+                initOnboarding();
+            }, 1000); // Delay to ensure UI is ready
+        } else {
+            console.warn('Onboarding component not found or not properly loaded');
+        }
+    };
 }
