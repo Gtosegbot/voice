@@ -1,6 +1,6 @@
 /**
  * CRM Component
- * Mini CRM functionality for managing customer relationships
+ * CRM Lite functionality for managing customer relationships
  */
 
 // Use global API and showToast function
@@ -18,7 +18,7 @@ function initCRM() {
     crmContainer.className = 'container-fluid';
     crmContainer.innerHTML = `
         <div class="d-sm-flex align-items-center justify-content-between mb-4">
-            <h1 class="h3 mb-0 text-gray-800">Mini CRM</h1>
+            <h1 class="h3 mb-0 text-gray-800">CRM Lite</h1>
             <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="new-contact-btn">
                 <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Novo Contato
             </button>
