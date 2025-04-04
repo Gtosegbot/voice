@@ -571,20 +571,15 @@ function logout() {
  * Initialize the onboarding component
  */
 function initializeOnboarding() {
-    // Import onboarding module
-    const script = document.createElement('script');
-    script.src = '/js/components/Onboarding/Onboarding.js';
-    script.type = 'text/javascript';
-    document.head.appendChild(script);
-    
-    // Initialize the onboarding when the script is loaded
-    script.onload = function() {
-        if (typeof initOnboarding === 'function') {
+    // Import onboarding module using ESM approach
+    import('/js/components/Onboarding/OnboardingController.js')
+        .then(module => {
+            // Initialize the onboarding controller
             setTimeout(() => {
-                initOnboarding();
+                module.initOnboardingController();
             }, 1000); // Delay to ensure UI is ready
-        } else {
-            console.warn('Onboarding component not found or not properly loaded');
-        }
-    };
+        })
+        .catch(error => {
+            console.warn('Onboarding component not found or not properly loaded:', error);
+        });
 }

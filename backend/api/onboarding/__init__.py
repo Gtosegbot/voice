@@ -3,4 +3,7 @@ Onboarding API package for the VoiceAI platform
 Handles user onboarding, tutorials and guided tours
 """
 
-from backend.api.onboarding.tutorial import tutorial_bp
+# This module will be populated by imports from individual modules
+# when they are fully implemented
+
+__all__ = []

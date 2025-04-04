@@ -5,6 +5,7 @@
 
 // Import dependencies
 import { InteractiveTutorial } from './InteractiveTutorial.js';
+import { initQuickSetup } from './QuickSetup.js';
 
 /**
  * Initialize the Onboarding Controller
@@ -13,6 +14,13 @@ function initOnboardingController() {
     checkUserOnboardingStatus();
     initInteractiveTutorial();
     setupOnboardingEvents();
+    
+    // If url has #quick-setup, load the quick setup wizard
+    if (window.location.hash.includes('quick-setup')) {
+        setTimeout(() => {
+            initQuickSetup();
+        }, 500);
+    }
 }
 
 /**
@@ -244,9 +252,115 @@ function setupOnboardingEvents() {
     }
 }
 
+/**
+ * Show tutorial welcome menu
+ */
+function showTutorialWelcome() {
+    // Create tutorial welcome overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'tutorial-welcome-overlay';
+    overlay.className = 'onboarding-overlay';
+    overlay.innerHTML = `
+        <div class="onboarding-overlay-content">
+            <div class="onboarding-overlay-header">
+                <img src="/img/logo-large.svg" alt="VoiceAI Logo" height="60">
+            </div>
+            <div class="onboarding-overlay-body text-center">
+                <h3>Tutorial e Ajuda</h3>
+                <p>Escolha o tipo de ajuda que você precisa:</p>
+                
+                <div class="tutorial-options mt-4">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="tutorial-option" data-tutorial="full">
+                                <div class="tutorial-option-icon">
+                                    <i class="fas fa-map fa-2x"></i>
+                                </div>
+                                <h5>Tour Completo</h5>
+                                <p>Conheça todas as funcionalidades da plataforma.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="tutorial-option" data-tutorial="campaign">
+                                <div class="tutorial-option-icon">
+                                    <i class="fas fa-bullhorn fa-2x"></i>
+                                </div>
+                                <h5>Criar Campanha</h5>
+                                <p>Aprenda a criar e gerenciar campanhas de prospecção.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="tutorial-option" data-tutorial="aiModel">
+                                <div class="tutorial-option-icon">
+                                    <i class="fas fa-robot fa-2x"></i>
+                                </div>
+                                <h5>Modelos de IA</h5>
+                                <p>Personalize os modelos de IA para suas necessidades.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="onboarding-overlay-footer">
+                <button class="btn btn-light" id="close-tutorial-welcome-btn">Fechar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Add CSS for tutorial options
+    const style = document.createElement('style');
+    style.textContent = `
+        .tutorial-options {
+            margin: 20px 0;
+        }
+        
+        .tutorial-option {
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 100%;
+        }
+        
+        .tutorial-option:hover {
+            border-color: #4e73df;
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tutorial-option-icon {
+            margin-bottom: 15px;
+            color: #4e73df;
+        }
+    `;
+    
+    document.head.appendChild(style);
+    
+    // Add event listeners
+    const tutorialOptions = document.querySelectorAll('.tutorial-option');
+    tutorialOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            const tutorialType = option.getAttribute('data-tutorial');
+            startTutorial(tutorialType);
+            document.getElementById('tutorial-welcome-overlay').remove();
+            document.head.removeChild(style);
+        });
+    });
+    
+    // Add close button event
+    document.getElementById('close-tutorial-welcome-btn').addEventListener('click', () => {
+        document.getElementById('tutorial-welcome-overlay').remove();
+        document.head.removeChild(style);
+    });
+}
+
 // Export functions
 export { 
     initOnboardingController, 
     showWelcomeMessage,
+    showTutorialWelcome,
     startTutorial
 };

@@ -2,7 +2,7 @@
 User model for the VoiceAI platform
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import jwt
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -44,7 +44,7 @@ class User(db.Model):
         """Generate auth token"""
         payload = {
             'user_id': self.id,
-            'exp': datetime.utcnow() + datetime.timedelta(seconds=expires_in)
+            'exp': datetime.utcnow() + timedelta(seconds=expires_in)
         }
         return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
     
