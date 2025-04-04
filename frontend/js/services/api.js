@@ -2,8 +2,10 @@
  * API service for communicating with the backend
  */
 
-// API base URL
-const API_BASE_URL = 'http://localhost:5001/api';
+// API base URL - Detect environment for API URL
+const API_BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5001/api' 
+    : (window.location.protocol + '//' + window.location.hostname + ':5001/api');
 
 /**
  * Send a request to the API

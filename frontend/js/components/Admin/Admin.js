@@ -65,13 +65,22 @@ function showToast(message, type = 'success') {
     toastContainer.appendChild(toast);
     
     // Initialize Bootstrap toast
-    const bootstrapToast = new bootstrap.Toast(toast, {
-        autohide: true,
-        delay: 5000
-    });
-    
-    // Show toast
-    bootstrapToast.show();
+    try {
+        const bootstrapToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 5000
+        });
+        
+        // Show toast
+        bootstrapToast.show();
+    } catch (error) {
+        console.error('Error initializing Bootstrap toast:', error);
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.remove();
+        }, 5000);
+    }
     
     // Remove toast from DOM after it's hidden
     toast.addEventListener('hidden.bs.toast', () => {
@@ -645,8 +654,16 @@ function showAddUserModal() {
     document.body.appendChild(modal);
     
     // Show modal
-    const bootstrapModal = new bootstrap.Modal(document.getElementById('add-user-modal'));
-    bootstrapModal.show();
+    try {
+        const bootstrapModal = new bootstrap.Modal(document.getElementById('add-user-modal'));
+        bootstrapModal.show();
+    } catch (error) {
+        console.error('Error showing modal:', error);
+        // Fallback if bootstrap is not available
+        const modal = document.getElementById('add-user-modal');
+        modal.classList.add('show');
+        modal.style.display = 'block';
+    }
     
     // Role change event to update permissions
     document.getElementById('user-role').addEventListener('change', function() {
@@ -708,7 +725,7 @@ function showAddUserModal() {
         showToast('Usuário criado com sucesso!', 'success');
         
         // Close modal
-        bootstrapModal.hide();
+        try { bootstrapModal.hide(); } catch(e) { console.error("Error hiding modal:", e); }
     });
     
     // Remove modal from DOM when hidden
@@ -878,8 +895,27 @@ function showEditUserModal(userId) {
     });
     
     // Show modal
-    const bootstrapModal = new bootstrap.Modal(document.getElementById('edit-user-modal'));
-    bootstrapModal.show();
+    try {
+        const bootstrapModal = new bootstrap.Modal(document.getElementById('edit-user-modal'));
+        bootstrapModal.show();
+        
+        // Store reference to modal for use in event handlers
+        window.currentEditModal = bootstrapModal;
+    } catch (error) {
+        console.error('Error showing edit user modal:', error);
+        // Fallback if bootstrap is not available
+        const modalElement = document.getElementById('edit-user-modal');
+        modalElement.classList.add('show');
+        modalElement.style.display = 'block';
+        // Create simple modal close function for non-bootstrap fallback
+        window.currentEditModal = {
+            hide: function() {
+                modalElement.classList.remove('show');
+                modalElement.style.display = 'none';
+                document.body.removeChild(modal);
+            }
+        };
+    }
     
     // Update user button
     document.getElementById('update-user-btn').addEventListener('click', function() {
@@ -913,7 +949,7 @@ function showEditUserModal(userId) {
         showToast('Usuário atualizado com sucesso!', 'success');
         
         // Close modal
-        bootstrapModal.hide();
+        try { window.currentEditModal.hide(); } catch(e) { console.error("Error hiding edit modal:", e); }
     });
     
     // Delete user button
@@ -927,7 +963,7 @@ function showEditUserModal(userId) {
         showToast('Usuário excluído com sucesso!', 'success');
         
         // Close modal
-        bootstrapModal.hide();
+        try { window.currentEditModal.hide(); } catch(e) { console.error("Error hiding edit modal:", e); }
     });
     
     // Remove modal from DOM when hidden
