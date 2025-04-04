@@ -403,5 +403,6 @@ class Store {
     }
 }
 
-// Create and export a singleton instance
+// Create and expose the store as a global variable
 const store = new Store();
+window.store = store;

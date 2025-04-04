@@ -244,5 +244,6 @@ class SocketService {
     }
 }
 
-// Create and export a singleton instance
+// Create and expose a singleton instance
 const socketService = new SocketService();
+window.socketService = socketService;

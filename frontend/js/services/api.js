@@ -373,4 +373,6 @@ class API {
     }
 }
 
-export { API, apiRequest };
+// Expose to window object
+window.API = API;
+window.apiRequest = apiRequest;
