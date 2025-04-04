@@ -930,3 +930,43 @@ function showToast(message) {
         toast.remove();
     });
 }
+
+// Expose component initialization to window object
+window.initAIModels = initAIModels;
+
+// Store for component elements
+let aiModelsContainer;
+
+/**
+ * AI Models component that handles AI integrations like ElevenLabs and OpenAI
+ */
+export default {
+    /**
+     * Initialize the AI Models component
+     * @param {HTMLElement} container - Container element where the component will be rendered
+     */
+    init: function(container) {
+        console.log('Initializing AI Models component');
+        
+        // Set AI Models container
+        aiModelsContainer = container;
+        
+        // Initialize the component
+        initAIModels();
+        
+        return container;
+    },
+    
+    /**
+     * Clean up the component
+     */
+    destroy: function() {
+        // Clean up any event listeners or resources
+        console.log('Destroying AI Models component');
+        
+        if (aiModelsContainer) {
+            // Reset content
+            aiModelsContainer.innerHTML = '';
+        }
+    }
+};

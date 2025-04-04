@@ -1021,4 +1021,39 @@ function showEditContactModal(contactId) {
     });
 }
 
-export { initCRM };
+// Expose component as default export and also named export for compatibility
+window.initCRM = initCRM;
+
+/**
+ * CRM component that handles customer relationship management functionality
+ */
+export default {
+    /**
+     * Initialize the CRM component
+     * @param {HTMLElement} container - Container element where the component will be rendered
+     */
+    init: function(container) {
+        console.log('Initializing CRM component');
+        
+        // Initialize the component
+        initCRM();
+        
+        // Add the component to the container
+        container.appendChild(crmContainer);
+        
+        return crmContainer;
+    },
+    
+    /**
+     * Clean up the component
+     */
+    destroy: function() {
+        // Clean up any event listeners or resources
+        if (crmContainer && crmContainer.parentNode) {
+            crmContainer.parentNode.removeChild(crmContainer);
+        }
+    }
+};
+
+// Already exporting the default export above, no need for named export
+// export { initCRM };

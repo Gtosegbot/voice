@@ -974,3 +974,34 @@ function showEditUserModal(userId) {
 
 // Expose the function to the window object to avoid ESM issues
 window.initAdmin = initAdmin;
+
+/**
+ * Admin component that handles all superadmin functionality
+ */
+export default {
+    /**
+     * Initialize the Admin component
+     * @param {HTMLElement} container - Container element where the component will be rendered
+     */
+    init: function(container) {
+        console.log('Initializing Admin component');
+        
+        // Initialize the component
+        initAdmin();
+        
+        // Add the component to the container
+        container.appendChild(adminContainer);
+        
+        return adminContainer;
+    },
+    
+    /**
+     * Clean up the component
+     */
+    destroy: function() {
+        // Clean up any event listeners or resources
+        if (adminContainer && adminContainer.parentNode) {
+            adminContainer.parentNode.removeChild(adminContainer);
+        }
+    }
+};

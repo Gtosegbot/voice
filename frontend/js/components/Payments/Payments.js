@@ -449,3 +449,43 @@ function updateBalance(amount) {
     // Refresh history
     loadCreditsHistory();
 }
+
+// Expose component initialization to window object
+window.initPayments = initPayments;
+
+// Store for component elements
+let paymentsContainer;
+
+/**
+ * Payments component that handles subscription and payment options
+ */
+export default {
+    /**
+     * Initialize the Payments component
+     * @param {HTMLElement} container - Container element where the component will be rendered
+     */
+    init: function(container) {
+        console.log('Initializing Payments component');
+        
+        // Set payments container
+        paymentsContainer = container;
+        
+        // Initialize the component
+        initPayments();
+        
+        return container;
+    },
+    
+    /**
+     * Clean up the component
+     */
+    destroy: function() {
+        // Clean up any event listeners or resources
+        console.log('Destroying Payments component');
+        
+        if (paymentsContainer) {
+            // Reset content
+            paymentsContainer.innerHTML = '';
+        }
+    }
+};

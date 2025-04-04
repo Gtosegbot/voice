@@ -224,6 +224,12 @@ function initActivePage() {
         case 'file-upload':
             initFileUpload();
             break;
+        case 'ai-models':
+            initAIModels();
+            break;
+        case 'payments':
+            initPayments();
+            break;
         case 'admin':
             initAdmin();
             break;
@@ -654,41 +660,52 @@ function initCRM() {
 function initCampaigns() {
     console.log('Initializing Campaigns component...');
     
-    // Import campaigns module using ESM approach
-    import('/js/components/Campaigns/Campaigns.js')
-        .then(module => {
-            // Get the campaigns page element
-            const campaignsPage = document.getElementById('campaigns-page');
-            
-            if (campaignsPage) {
-                // Initialize the campaigns component
-                const campaignsComponent = module.initCampaigns();
-                
-                // Clear the page and append the component
-                campaignsPage.innerHTML = '';
-                campaignsPage.appendChild(campaignsComponent);
-            }
-        })
-        .catch(error => {
+    // Get the campaigns page element
+    const campaignsPage = document.getElementById('campaigns-page');
+    
+    if (campaignsPage) {
+        try {
+            // Import campaigns module using ESM approach
+            import('/js/components/Campaigns/Campaigns.js')
+                .then(module => {
+                    // Initialize the campaigns component
+                    module.default.init(campaignsPage);
+                })
+                .catch(error => {
+                    console.warn('Campaigns component not found or not properly loaded:', error);
+                    
+                    // Show error message
+                    campaignsPage.innerHTML = `
+                        <div class="container-fluid">
+                            <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                                <h1 class="h3 mb-0 text-gray-800">Campanhas</h1>
+                            </div>
+                            
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Erro ao carregar o módulo de campanhas.
+                            </div>
+                        </div>
+                    `;
+                });
+        } catch (error) {
             console.warn('Campaigns component not found or not properly loaded:', error);
             
             // Show error message
-            const campaignsPage = document.getElementById('campaigns-page');
-            if (campaignsPage) {
-                campaignsPage.innerHTML = `
-                    <div class="container-fluid">
-                        <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                            <h1 class="h3 mb-0 text-gray-800">Campanhas</h1>
-                        </div>
-                        
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar o módulo de campanhas.
-                        </div>
+            campaignsPage.innerHTML = `
+                <div class="container-fluid">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Campanhas</h1>
                     </div>
-                `;
-            }
-        });
+                    
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar o módulo de campanhas.
+                    </div>
+                </div>
+            `;
+        }
+    }
 }
 
 /**
@@ -812,6 +829,114 @@ function initAdmin() {
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         Erro ao carregar o módulo de administração.
+                    </div>
+                </div>
+            `;
+        }
+    }
+}
+
+/**
+ * Initialize AIModels component
+ */
+function initAIModels() {
+    console.log('Initializing AI Models component...');
+    
+    // Get the AI Models page element
+    const aiModelsPage = document.getElementById('ai-models-page');
+    
+    if (aiModelsPage) {
+        try {
+            // Import AI models module using ESM approach
+            import('/js/components/AIModels/AIModels.js')
+                .then(module => {
+                    // Initialize the AI Models component
+                    module.default.init(aiModelsPage);
+                })
+                .catch(error => {
+                    console.warn('AI Models component not found or not properly loaded:', error);
+                    
+                    // Show error message
+                    aiModelsPage.innerHTML = `
+                        <div class="container-fluid">
+                            <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                                <h1 class="h3 mb-0 text-gray-800">Modelos de IA</h1>
+                            </div>
+                            
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Erro ao carregar o módulo de modelos de IA.
+                            </div>
+                        </div>
+                    `;
+                });
+        } catch (error) {
+            console.warn('AI Models component not found or not properly loaded:', error);
+            
+            // Show error message
+            aiModelsPage.innerHTML = `
+                <div class="container-fluid">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Modelos de IA</h1>
+                    </div>
+                    
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar o módulo de modelos de IA.
+                    </div>
+                </div>
+            `;
+        }
+    }
+}
+
+/**
+ * Initialize Payments component
+ */
+function initPayments() {
+    console.log('Initializing Payments component...');
+    
+    // Get the Payments page element
+    const paymentsPage = document.getElementById('payments-page');
+    
+    if (paymentsPage) {
+        try {
+            // Import payments module using ESM approach
+            import('/js/components/Payments/Payments.js')
+                .then(module => {
+                    // Initialize the Payments component
+                    module.default.init(paymentsPage);
+                })
+                .catch(error => {
+                    console.warn('Payments component not found or not properly loaded:', error);
+                    
+                    // Show error message
+                    paymentsPage.innerHTML = `
+                        <div class="container-fluid">
+                            <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                                <h1 class="h3 mb-0 text-gray-800">Pagamentos</h1>
+                            </div>
+                            
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Erro ao carregar o módulo de pagamentos.
+                            </div>
+                        </div>
+                    `;
+                });
+        } catch (error) {
+            console.warn('Payments component not found or not properly loaded:', error);
+            
+            // Show error message
+            paymentsPage.innerHTML = `
+                <div class="container-fluid">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Pagamentos</h1>
+                    </div>
+                    
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar o módulo de pagamentos.
                     </div>
                 </div>
             `;

@@ -1042,3 +1042,43 @@ function cancelCallback(callbackId) {
         loadScheduledCallbacks();
     }
 }
+
+// Expose component initialization to window object
+window.initCampaigns = initCampaigns;
+
+// Store for component elements
+let campaignsContainer;
+
+/**
+ * Campaigns component that handles marketing campaigns
+ */
+export default {
+    /**
+     * Initialize the Campaigns component
+     * @param {HTMLElement} container - Container element where the component will be rendered
+     */
+    init: function(container) {
+        console.log('Initializing Campaigns component');
+        
+        // Set campaigns container
+        campaignsContainer = container;
+        
+        // Initialize the component
+        initCampaigns();
+        
+        return container;
+    },
+    
+    /**
+     * Clean up the component
+     */
+    destroy: function() {
+        // Clean up any event listeners or resources
+        console.log('Destroying Campaigns component');
+        
+        if (campaignsContainer) {
+            // Reset content
+            campaignsContainer.innerHTML = '';
+        }
+    }
+};
