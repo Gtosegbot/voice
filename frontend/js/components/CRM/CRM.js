@@ -1021,17 +1021,10 @@ function showEditContactModal(contactId) {
     });
 }
 
-// Expose component as default export and also named export for compatibility
+// Expose component functions to window object
 window.initCRM = initCRM;
-
-/**
- * CRM component that handles customer relationship management functionality
- */
-export default {
-    /**
-     * Initialize the CRM component
-     * @param {HTMLElement} container - Container element where the component will be rendered
-     */
+// Adding other CRM functions to window object as well
+window.CRM = {
     init: function(container) {
         console.log('Initializing CRM component');
         
@@ -1044,9 +1037,6 @@ export default {
         return crmContainer;
     },
     
-    /**
-     * Clean up the component
-     */
     destroy: function() {
         // Clean up any event listeners or resources
         if (crmContainer && crmContainer.parentNode) {
@@ -1054,6 +1044,3 @@ export default {
         }
     }
 };
-
-// Already exporting the default export above, no need for named export
-// export { initCRM };

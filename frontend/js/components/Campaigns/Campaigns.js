@@ -1052,7 +1052,11 @@ let campaignsContainer;
 /**
  * Campaigns component that handles marketing campaigns
  */
-export default {
+// Expose component functions to window object
+window.initCampaigns = initCampaigns;
+
+// Adding other Campaigns functions to window object as well
+window.Campaigns = {
     /**
      * Initialize the Campaigns component
      * @param {HTMLElement} container - Container element where the component will be rendered

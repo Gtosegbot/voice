@@ -459,7 +459,11 @@ let paymentsContainer;
 /**
  * Payments component that handles subscription and payment options
  */
-export default {
+// Expose component functions to window object
+window.initPayments = initPayments;
+
+// Adding other Payments functions to window object as well
+window.Payments = {
     /**
      * Initialize the Payments component
      * @param {HTMLElement} container - Container element where the component will be rendered

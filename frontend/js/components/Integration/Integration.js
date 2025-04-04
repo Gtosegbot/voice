@@ -2247,4 +2247,5 @@ function generateRandomString(length) {
     return result;
 }
 
-export { initIntegration };
+// Expose functions to window object instead of using ES6 exports
+window.initIntegration = initIntegration;

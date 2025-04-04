@@ -978,7 +978,8 @@ window.initAdmin = initAdmin;
 /**
  * Admin component that handles all superadmin functionality
  */
-export default {
+// Removed export statement to avoid ES module errors
+const Admin = {
     /**
      * Initialize the Admin component
      * @param {HTMLElement} container - Container element where the component will be rendered
@@ -1005,3 +1006,6 @@ export default {
         }
     }
 };
+
+// Expose the Admin component to the window object
+window.Admin = Admin;

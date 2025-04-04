@@ -488,8 +488,6 @@ function endTutorial() {
     });
 }
 
-// Export functions
-export {
-    initInteractiveTutorial,
-    startTutorial
-};
+// Expose functions to window object instead of using ES6 exports
+window.initInteractiveTutorial = initInteractiveTutorial;
+window.startTutorial = startTutorial;

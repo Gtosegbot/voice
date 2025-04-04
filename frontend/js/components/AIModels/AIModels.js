@@ -939,8 +939,12 @@ let aiModelsContainer;
 
 /**
  * AI Models component that handles AI integrations like ElevenLabs and OpenAI
+ * Expose component functions to window object
  */
-export default {
+window.initAIModels = initAIModels;
+
+// Adding other AIModels functions to window object as well
+window.AIModels = {
     /**
      * Initialize the AI Models component
      * @param {HTMLElement} container - Container element where the component will be rendered

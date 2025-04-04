@@ -3,8 +3,7 @@
  * Provides wizard-like interface for initial platform setup
  */
 
-// Import dependencies
-import { apiRequest } from '../../services/api.js';
+// Use apiRequest from window object instead of importing
 
 /**
  * Initialize the Quick Setup wizard
@@ -615,7 +614,5 @@ function completeSetup() {
     localStorage.setItem('isNewUser', 'false');
 }
 
-// Export functions
-export {
-    initQuickSetup
-};
+// Expose functions to window object instead of using ES6 exports
+window.initQuickSetup = initQuickSetup;

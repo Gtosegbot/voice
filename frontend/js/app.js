@@ -613,17 +613,15 @@ function logout() {
  * Initialize the onboarding component
  */
 function initializeOnboarding() {
-    // Import onboarding module using ESM approach
-    import('/js/components/Onboarding/OnboardingController.js')
-        .then(module => {
-            // Initialize the onboarding controller
-            setTimeout(() => {
-                module.initOnboardingController();
-            }, 1000); // Delay to ensure UI is ready
-        })
-        .catch(error => {
-            console.warn('Onboarding component not found or not properly loaded:', error);
-        });
+    // Use regular JavaScript approach to load components
+    // We need a timeout to ensure all components are loaded
+    setTimeout(() => {
+        if (typeof window.initOnboardingController === 'function') {
+            window.initOnboardingController();
+        } else {
+            console.warn('Onboarding component not found or not properly loaded:', {});
+        }
+    }, 1000); // Delay to ensure UI is ready
 }
 
 /**
@@ -665,29 +663,13 @@ function initCampaigns() {
     
     if (campaignsPage) {
         try {
-            // Import campaigns module using ESM approach
-            import('/js/components/Campaigns/Campaigns.js')
-                .then(module => {
-                    // Initialize the campaigns component
-                    module.default.init(campaignsPage);
-                })
-                .catch(error => {
-                    console.warn('Campaigns component not found or not properly loaded:', error);
-                    
-                    // Show error message
-                    campaignsPage.innerHTML = `
-                        <div class="container-fluid">
-                            <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                                <h1 class="h3 mb-0 text-gray-800">Campanhas</h1>
-                            </div>
-                            
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Erro ao carregar o módulo de campanhas.
-                            </div>
-                        </div>
-                    `;
-                });
+            // Verificar se a função existe
+            if (typeof window.initCampaigns === 'function') {
+                // Initialize the campaigns component
+                window.initCampaigns(campaignsPage);
+            } else {
+                throw new Error('Campaigns module not found');
+            }
         } catch (error) {
             console.warn('Campaigns component not found or not properly loaded:', error);
             
@@ -714,41 +696,36 @@ function initCampaigns() {
 function initIntegration() {
     console.log('Initializing Integration component...');
     
-    // Import integration module using ESM approach
-    import('/js/components/Integration/Integration.js')
-        .then(module => {
-            // Get the integration page element
-            const integrationPage = document.getElementById('integration-page');
-            
-            if (integrationPage) {
+    // Get the integration page element
+    const integrationPage = document.getElementById('integration-page');
+    
+    if (integrationPage) {
+        try {
+            // Verificar se a função existe
+            if (typeof window.initIntegration === 'function') {
                 // Initialize the integration component
-                const integrationComponent = module.initIntegration();
-                
-                // Clear the page and append the component
-                integrationPage.innerHTML = '';
-                integrationPage.appendChild(integrationComponent);
+                window.initIntegration(integrationPage);
+            } else {
+                throw new Error('Integration module not found');
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.warn('Integration component not found or not properly loaded:', error);
             
             // Show error message
-            const integrationPage = document.getElementById('integration-page');
-            if (integrationPage) {
-                integrationPage.innerHTML = `
-                    <div class="container-fluid">
-                        <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                            <h1 class="h3 mb-0 text-gray-800">Integrações</h1>
-                        </div>
-                        
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar o módulo de integrações.
-                        </div>
+            integrationPage.innerHTML = `
+                <div class="container-fluid">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Integrações</h1>
                     </div>
-                `;
-            }
-        });
+                    
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar o módulo de integrações.
+                    </div>
+                </div>
+            `;
+        }
+    }
 }
 
 /**
@@ -757,41 +734,36 @@ function initIntegration() {
 function initFileUpload() {
     console.log('Initializing FileUpload component...');
     
-    // Import file upload module using ESM approach
-    import('/js/components/FileUpload/FileUpload.js')
-        .then(module => {
-            // Get the file upload page element
-            const fileUploadPage = document.getElementById('file-upload-page');
-            
-            if (fileUploadPage) {
+    // Get the file upload page element
+    const fileUploadPage = document.getElementById('file-upload-page');
+    
+    if (fileUploadPage) {
+        try {
+            // Verificar se a função existe
+            if (typeof window.initFileUpload === 'function') {
                 // Initialize the file upload component
-                const fileUploadComponent = module.initFileUpload();
-                
-                // Clear the page and append the component
-                fileUploadPage.innerHTML = '';
-                fileUploadPage.appendChild(fileUploadComponent);
+                window.initFileUpload(fileUploadPage);
+            } else {
+                throw new Error('FileUpload module not found');
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.warn('FileUpload component not found or not properly loaded:', error);
             
             // Show error message
-            const fileUploadPage = document.getElementById('file-upload-page');
-            if (fileUploadPage) {
-                fileUploadPage.innerHTML = `
-                    <div class="container-fluid">
-                        <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                            <h1 class="h3 mb-0 text-gray-800">Importação de Clientes</h1>
-                        </div>
-                        
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Erro ao carregar o módulo de importação de clientes.
-                        </div>
+            fileUploadPage.innerHTML = `
+                <div class="container-fluid">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Importação de Clientes</h1>
                     </div>
-                `;
-            }
-        });
+                    
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar o módulo de importação de clientes.
+                    </div>
+                </div>
+            `;
+        }
+    }
 }
 
 /**
@@ -847,29 +819,13 @@ function initAIModels() {
     
     if (aiModelsPage) {
         try {
-            // Import AI models module using ESM approach
-            import('/js/components/AIModels/AIModels.js')
-                .then(module => {
-                    // Initialize the AI Models component
-                    module.default.init(aiModelsPage);
-                })
-                .catch(error => {
-                    console.warn('AI Models component not found or not properly loaded:', error);
-                    
-                    // Show error message
-                    aiModelsPage.innerHTML = `
-                        <div class="container-fluid">
-                            <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                                <h1 class="h3 mb-0 text-gray-800">Modelos de IA</h1>
-                            </div>
-                            
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Erro ao carregar o módulo de modelos de IA.
-                            </div>
-                        </div>
-                    `;
-                });
+            // Verificar se a função existe
+            if (typeof window.initAIModels === 'function') {
+                // Initialize the AI models component
+                window.initAIModels(aiModelsPage);
+            } else {
+                throw new Error('AI Models module not found');
+            }
         } catch (error) {
             console.warn('AI Models component not found or not properly loaded:', error);
             
@@ -901,29 +857,13 @@ function initPayments() {
     
     if (paymentsPage) {
         try {
-            // Import payments module using ESM approach
-            import('/js/components/Payments/Payments.js')
-                .then(module => {
-                    // Initialize the Payments component
-                    module.default.init(paymentsPage);
-                })
-                .catch(error => {
-                    console.warn('Payments component not found or not properly loaded:', error);
-                    
-                    // Show error message
-                    paymentsPage.innerHTML = `
-                        <div class="container-fluid">
-                            <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                                <h1 class="h3 mb-0 text-gray-800">Pagamentos</h1>
-                            </div>
-                            
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Erro ao carregar o módulo de pagamentos.
-                            </div>
-                        </div>
-                    `;
-                });
+            // Verificar se a função existe
+            if (typeof window.initPayments === 'function') {
+                // Initialize the payments component
+                window.initPayments(paymentsPage);
+            } else {
+                throw new Error('Payments module not found');
+            }
         } catch (error) {
             console.warn('Payments component not found or not properly loaded:', error);
             

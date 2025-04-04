@@ -1,10 +1,7 @@
 /**
  * Onboarding Module Index
- * Exports the Onboarding functionality
+ * Provides the Onboarding functionality
  */
-
-// Import Onboarding component
-import './Onboarding.js';
 
 // Initialize Onboarding when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,8 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Export initialization function for manual initialization
-export const startOnboardingTutorial = () => {
+// Initialize function for manual initialization
+window.startOnboardingTutorial = () => {
     if (typeof startOnboarding === 'function') {
         startOnboarding();
     }

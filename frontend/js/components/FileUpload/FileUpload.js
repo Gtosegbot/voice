@@ -1106,4 +1106,5 @@ function showImportHelp() {
     });
 }
 
-export { initFileUpload };
+// Expose functions to window object instead of using ES6 exports
+window.initFileUpload = initFileUpload;

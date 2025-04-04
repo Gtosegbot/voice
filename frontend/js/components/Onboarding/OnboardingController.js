@@ -3,9 +3,8 @@
  * Controls onboarding flow and user guidance for the VoiceAI platform
  */
 
-// Import dependencies
-import { InteractiveTutorial } from './InteractiveTutorial.js';
-import { initQuickSetup } from './QuickSetup.js';
+// Removed ES6 import statements to avoid errors
+// We'll use global variables instead
 
 /**
  * Initialize the Onboarding Controller
@@ -357,10 +356,8 @@ function showTutorialWelcome() {
     });
 }
 
-// Export functions
-export { 
-    initOnboardingController, 
-    showWelcomeMessage,
-    showTutorialWelcome,
-    startTutorial
-};
+// Expose functions to window object instead of using ES6 exports
+window.initOnboardingController = initOnboardingController;
+window.showWelcomeMessage = showWelcomeMessage;
+window.showTutorialWelcome = showTutorialWelcome;
+window.startTutorial = startTutorial;
