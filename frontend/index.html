@@ -30,6 +30,14 @@
                         <i class="fas fa-comments"></i>
                         <span>Conversas</span>
                     </li>
+                    <li class="sidebar-nav-item" data-page="campaigns">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Campanhas</span>
+                    </li>
+                    <li class="sidebar-nav-item" data-page="crm">
+                        <i class="fas fa-address-card"></i>
+                        <span>Mini CRM</span>
+                    </li>
                     <li class="sidebar-nav-item" data-page="analytics">
                         <i class="fas fa-chart-line"></i>
                         <span>Análises</span>
@@ -38,9 +46,25 @@
                         <i class="fas fa-sitemap"></i>
                         <span>Construtor de Fluxo</span>
                     </li>
+                    <li class="sidebar-nav-item" data-page="ai-models">
+                        <i class="fas fa-brain"></i>
+                        <span>Modelos IA</span>
+                    </li>
+                    <li class="sidebar-nav-item" data-page="integrations">
+                        <i class="fas fa-plug"></i>
+                        <span>Integrações</span>
+                    </li>
+                    <li class="sidebar-nav-item" data-page="payments">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Pagamentos</span>
+                    </li>
                     <li class="sidebar-nav-item" data-page="settings">
                         <i class="fas fa-cog"></i>
                         <span>Configurações</span>
+                    </li>
+                    <li class="sidebar-nav-item admin-only" data-page="admin">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Superadmin</span>
                     </li>
                 </ul>
             </nav>
@@ -176,6 +200,35 @@
                 
                 <!-- Settings Page -->
                 <div id="settings-page" class="content-page" style="display: none;">
+                <!-- Campaigns Page --> 
+                <div id="campaigns-page" class="content-page" style="display: none;"> 
+                    <!-- Will be populated by Campaigns.js --> 
+                </div> 
+                
+                <!-- CRM Page --> 
+                <div id="crm-page" class="content-page" style="display: none;"> 
+                    <!-- Will be populated by CRM.js --> 
+                </div> 
+                
+                <!-- AI Models Page --> 
+                <div id="ai-models-page" class="content-page" style="display: none;"> 
+                    <!-- Will be populated by AIModels.js --> 
+                </div> 
+                
+                <!-- Integrations Page --> 
+                <div id="integrations-page" class="content-page" style="display: none;"> 
+                    <!-- Will be populated by Integrations.js --> 
+                </div> 
+                
+                <!-- Payments Page --> 
+                <div id="payments-page" class="content-page" style="display: none;"> 
+                    <!-- Will be populated by Payments.js --> 
+                </div> 
+                
+                <!-- Admin Page --> 
+                <div id="admin-page" class="content-page" style="display: none;"> 
+                    <!-- Will be populated by Admin.js --> 
+                </div>
                     <!-- Will be populated by Settings.js -->
                 </div>
             </div>
@@ -287,6 +340,13 @@
     <script src="js/components/Analytics/Analytics.js"></script>
     <script src="js/components/FlowBuilder/FlowBuilder.js"></script>
     <script src="js/components/Settings/Settings.js"></script>
+    <script src="js/components/Campaigns/Campaigns.js"></script> 
+    <script src="js/components/CRM/CRM.js"></script> 
+    <script src="js/components/AIModels/AIModels.js"></script> 
+    <script src="js/components/Integration/Integration.js"></script> 
+    <script src="js/components/Payments/Payments.js"></script> 
+    <script src="js/components/Admin/Admin.js"></script> 
+    <script src="js/components/FileUpload/FileUpload.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
