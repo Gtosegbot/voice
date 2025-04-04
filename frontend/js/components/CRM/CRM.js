@@ -3,8 +3,8 @@
  * CRM Lite functionality for managing customer relationships
  */
 
-// Use global API and showToast function
-// Removed imports to avoid ES module errors
+// Usamos função global showToast de utils.js
+// Usamos API global do services/api.js
 
 // Main container for CRM component
 let crmContainer;
