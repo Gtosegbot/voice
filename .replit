@@ -13,10 +13,6 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Backend Server"
 
 [[workflows.workflow.tasks]]
@@ -27,20 +23,9 @@ args = "Screenshot Preview"
 task = "workflow.run"
 args = "WebSocket Server"
 
-[[workflows.workflow]]
-name = "Frontend Server"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
 [[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && python -m http.server 5000"
-waitForPort = 5000
+task = "workflow.run"
+args = "Aplicação Principal"
 
 [[workflows.workflow]]
 name = "Backend Server"
@@ -86,6 +71,21 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "python ws_server.py"
 waitForPort = 8765
+
+[[workflows.workflow]]
+name = "Aplicação Principal"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m http.server 5000"
+waitForPort = 5000
 
 [deployment]
 run = ["sh", "-c", "cd frontend && python -m http.server 5000"]
