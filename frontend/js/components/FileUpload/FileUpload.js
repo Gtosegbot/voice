@@ -3,8 +3,8 @@
  * Handles importing client data from various file formats
  */
 
-import { API } from '../../services/api.js';
-import { showToast } from '../../utils/toast.js';
+// Use global API and showToast function
+// Removed imports to avoid ES module errors
 
 // Main container for file upload component
 let fileUploadContainer;

@@ -1,20 +1,33 @@
 """
 WebSocket server for real-time communication in VoiceAI Platform
+
+This server provides real-time communication between the different components
+of the VoiceAI platform, such as:
+- Frontend client applications
+- Backend server instances
+- MCP (Message Control Protocol) server
+- External integrations (Asterisk, WhatsApp, etc.)
+
+It acts as a message broker for real-time events and notifications.
 """
 
 import asyncio
 import websockets
 import json
-import jwt
-import os
 import logging
+import os
+import jwt
 from datetime import datetime
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('websocket_server')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-# JWT secret key
+# Configuration
+PORT = int(os.environ.get('WS_PORT', 8765))
 JWT_SECRET = os.environ.get('JWT_SECRET', 'voiceai-secret-key')
 
 # Connected clients

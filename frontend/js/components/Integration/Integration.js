@@ -3,8 +3,8 @@
  * Handles external integrations with Make, n8n, and other platforms
  */
 
-import { API } from '../../services/api.js';
-import { showToast } from '../../utils/toast.js';
+// Use global API and showToast function
+// Removed imports to avoid ES module errors
 
 // Main container for integration component
 let integrationContainer;

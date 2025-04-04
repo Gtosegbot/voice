@@ -68,13 +68,33 @@ function showToast(message, type = 'success') {
     toastContainer.appendChild(toast);
     
     // Initialize Bootstrap toast
-    const bootstrapToast = new bootstrap.Toast(toast, {
-        autohide: true,
-        delay: 5000
-    });
-    
-    // Show toast
-    bootstrapToast.show();
+    try {
+        const bootstrapToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 5000
+        });
+        
+        // Show toast
+        bootstrapToast.show();
+    } catch (error) {
+        console.error('Error initializing Bootstrap toast:', error);
+        // Fallback implementation when Bootstrap is not available
+        toast.style.display = 'block';
+        toast.style.opacity = '1';
+        
+        // Auto-hide after delay
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                toast.remove();
+                
+                // Remove container if it's empty
+                if (toastContainer.children.length === 0) {
+                    toastContainer.remove();
+                }
+            }, 300);
+        }, 5000);
+    }
     
     // Remove toast from DOM after it's hidden
     toast.addEventListener('hidden.bs.toast', () => {
@@ -87,4 +107,5 @@ function showToast(message, type = 'success') {
     });
 }
 
-export { showToast };
+// Add to window object for global access without import
+window.showToast = showToast;
