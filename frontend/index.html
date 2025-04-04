@@ -50,9 +50,13 @@
                         <i class="fas fa-brain"></i>
                         <span>Modelos IA</span>
                     </li>
-                    <li class="sidebar-nav-item" data-page="integrations">
+                    <li class="sidebar-nav-item" data-page="integration">
                         <i class="fas fa-plug"></i>
                         <span>Integrações</span>
+                    </li>
+                    <li class="sidebar-nav-item" data-page="file-upload">
+                        <i class="fas fa-file-import"></i>
+                        <span>Importar Clientes</span>
                     </li>
                     <li class="sidebar-nav-item" data-page="payments">
                         <i class="fas fa-credit-card"></i>
@@ -200,6 +204,9 @@
                 
                 <!-- Settings Page -->
                 <div id="settings-page" class="content-page" style="display: none;">
+                    <!-- Will be populated by Settings.js -->
+                </div>
+                
                 <!-- Campaigns Page --> 
                 <div id="campaigns-page" class="content-page" style="display: none;"> 
                     <!-- Will be populated by Campaigns.js --> 
@@ -215,10 +222,15 @@
                     <!-- Will be populated by AIModels.js --> 
                 </div> 
                 
-                <!-- Integrations Page --> 
-                <div id="integrations-page" class="content-page" style="display: none;"> 
-                    <!-- Will be populated by Integrations.js --> 
-                </div> 
+                <!-- Integration Page --> 
+                <div id="integration-page" class="content-page" style="display: none;"> 
+                    <!-- Will be populated by Integration.js --> 
+                </div>
+                
+                <!-- File Upload Page --> 
+                <div id="file-upload-page" class="content-page" style="display: none;"> 
+                    <!-- Will be populated by FileUpload.js --> 
+                </div>
                 
                 <!-- Payments Page --> 
                 <div id="payments-page" class="content-page" style="display: none;"> 
@@ -228,8 +240,6 @@
                 <!-- Admin Page --> 
                 <div id="admin-page" class="content-page" style="display: none;"> 
                     <!-- Will be populated by Admin.js --> 
-                </div>
-                    <!-- Will be populated by Settings.js -->
                 </div>
             </div>
         </main>
@@ -317,20 +327,15 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="after-call-work-btn">
-                        Finalizar e Adicionar Notas
-                    </button>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Libraries -->
+    <!-- Bootstrap, Chart.js and app scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Application Scripts -->
+    <!-- App scripts -->
     <script src="js/services/api.js"></script>
     <script src="js/services/socket.js"></script>
     <script src="js/store/index.js"></script>

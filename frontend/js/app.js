@@ -157,6 +157,27 @@ function updatePageVisibility(currentPage) {
         case 'flow-builder':
             pageElement = document.getElementById('flow-builder-page');
             break;
+        case 'crm':
+            pageElement = document.getElementById('crm-page');
+            break;
+        case 'campaigns':
+            pageElement = document.getElementById('campaigns-page');
+            break;
+        case 'integration':
+            pageElement = document.getElementById('integration-page');
+            break;
+        case 'file-upload':
+            pageElement = document.getElementById('file-upload-page');
+            break;
+        case 'ai-models':
+            pageElement = document.getElementById('ai-models-page');
+            break;
+        case 'payments':
+            pageElement = document.getElementById('payments-page');
+            break;
+        case 'admin':
+            pageElement = document.getElementById('admin-page');
+            break;
         case 'settings':
             pageElement = document.getElementById('settings-page');
             break;
@@ -190,6 +211,21 @@ function initActivePage() {
             break;
         case 'flow-builder':
             initFlowBuilder();
+            break;
+        case 'crm':
+            initCRM();
+            break;
+        case 'campaigns':
+            initCampaigns();
+            break;
+        case 'integration':
+            initIntegration();
+            break;
+        case 'file-upload':
+            initFileUpload();
+            break;
+        case 'admin':
+            initAdmin();
             break;
         case 'settings':
             initSettings();
@@ -582,4 +618,203 @@ function initializeOnboarding() {
         .catch(error => {
             console.warn('Onboarding component not found or not properly loaded:', error);
         });
+}
+
+/**
+ * Initialize CRM component
+ */
+function initCRM() {
+    // In a full implementation, we would import and initialize the CRM component
+    console.log('Initializing CRM component...');
+    
+    // For demo, show a placeholder
+    const crmPage = document.getElementById('crm-page');
+    if (crmPage) {
+        crmPage.innerHTML = `
+            <div class="container-fluid">
+                <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">CRM</h1>
+                    <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                        <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Novo Contato
+                    </button>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    O módulo CRM está em desenvolvimento e será disponibilizado em breve.
+                </div>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Initialize Campaigns component
+ */
+function initCampaigns() {
+    console.log('Initializing Campaigns component...');
+    
+    // Import campaigns module using ESM approach
+    import('/js/components/Campaigns/Campaigns.js')
+        .then(module => {
+            // Get the campaigns page element
+            const campaignsPage = document.getElementById('campaigns-page');
+            
+            if (campaignsPage) {
+                // Initialize the campaigns component
+                const campaignsComponent = module.initCampaigns();
+                
+                // Clear the page and append the component
+                campaignsPage.innerHTML = '';
+                campaignsPage.appendChild(campaignsComponent);
+            }
+        })
+        .catch(error => {
+            console.warn('Campaigns component not found or not properly loaded:', error);
+            
+            // Show error message
+            const campaignsPage = document.getElementById('campaigns-page');
+            if (campaignsPage) {
+                campaignsPage.innerHTML = `
+                    <div class="container-fluid">
+                        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                            <h1 class="h3 mb-0 text-gray-800">Campanhas</h1>
+                        </div>
+                        
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar o módulo de campanhas.
+                        </div>
+                    </div>
+                `;
+            }
+        });
+}
+
+/**
+ * Initialize Integration component
+ */
+function initIntegration() {
+    console.log('Initializing Integration component...');
+    
+    // Import integration module using ESM approach
+    import('/js/components/Integration/Integration.js')
+        .then(module => {
+            // Get the integration page element
+            const integrationPage = document.getElementById('integration-page');
+            
+            if (integrationPage) {
+                // Initialize the integration component
+                const integrationComponent = module.initIntegration();
+                
+                // Clear the page and append the component
+                integrationPage.innerHTML = '';
+                integrationPage.appendChild(integrationComponent);
+            }
+        })
+        .catch(error => {
+            console.warn('Integration component not found or not properly loaded:', error);
+            
+            // Show error message
+            const integrationPage = document.getElementById('integration-page');
+            if (integrationPage) {
+                integrationPage.innerHTML = `
+                    <div class="container-fluid">
+                        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                            <h1 class="h3 mb-0 text-gray-800">Integrações</h1>
+                        </div>
+                        
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar o módulo de integrações.
+                        </div>
+                    </div>
+                `;
+            }
+        });
+}
+
+/**
+ * Initialize FileUpload component
+ */
+function initFileUpload() {
+    console.log('Initializing FileUpload component...');
+    
+    // Import file upload module using ESM approach
+    import('/js/components/FileUpload/FileUpload.js')
+        .then(module => {
+            // Get the file upload page element
+            const fileUploadPage = document.getElementById('file-upload-page');
+            
+            if (fileUploadPage) {
+                // Initialize the file upload component
+                const fileUploadComponent = module.initFileUpload();
+                
+                // Clear the page and append the component
+                fileUploadPage.innerHTML = '';
+                fileUploadPage.appendChild(fileUploadComponent);
+            }
+        })
+        .catch(error => {
+            console.warn('FileUpload component not found or not properly loaded:', error);
+            
+            // Show error message
+            const fileUploadPage = document.getElementById('file-upload-page');
+            if (fileUploadPage) {
+                fileUploadPage.innerHTML = `
+                    <div class="container-fluid">
+                        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                            <h1 class="h3 mb-0 text-gray-800">Importação de Clientes</h1>
+                        </div>
+                        
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Erro ao carregar o módulo de importação de clientes.
+                        </div>
+                    </div>
+                `;
+            }
+        });
+}
+
+/**
+ * Initialize Admin component
+ */
+function initAdmin() {
+    console.log('Initializing Admin component...');
+    
+    // Get the admin page element
+    const adminPage = document.getElementById('admin-page');
+    
+    if (adminPage) {
+        try {
+            // Verificar se a função existe
+            if (typeof window.initAdmin === 'function') {
+                // Initialize the admin component
+                const adminComponent = window.initAdmin();
+                
+                // Clear the page and append the component
+                adminPage.innerHTML = '';
+                adminPage.appendChild(adminComponent);
+            } else {
+                throw new Error('Admin module not found');
+            }
+        } catch (error) {
+            console.warn('Admin component not found or not properly loaded:', error);
+            
+            // Show error message
+            adminPage.innerHTML = `
+                <div class="container-fluid">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Superadmin</h1>
+                    </div>
+                    
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar o módulo de administração.
+                    </div>
+                </div>
+            `;
+        }
+    }
 }
