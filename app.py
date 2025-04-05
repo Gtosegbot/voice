@@ -1,8 +1,9 @@
+
 """
 VoiceAI Platform - Main application entry point
 """
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, send_file
 from backend import create_app
 from backend.models.db import db
 import os
@@ -19,13 +20,13 @@ app = create_app()
 
 @app.route('/')
 def serve_index():
-    return send_from_directory('frontend', 'index.html')
+    return send_file('index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
-    if path.startswith('img/'):
-        return send_from_directory('.', path)
-    return send_from_directory('frontend', path)
+    if path.startswith(('css/', 'js/', 'img/')):
+        return send_from_directory('frontend', path)
+    return send_from_directory('.', path)
 
 # Use app.before_request instead of before_first_request in newer Flask versions
 @app.before_request
@@ -40,6 +41,6 @@ def create_tables():
 if __name__ == '__main__':
     # Get port from environment or use default (5000)
     port = int(os.environ.get('PORT', 5000))
-
+    
     # Run the application
     app.run(host='0.0.0.0', port=port, debug=True)
