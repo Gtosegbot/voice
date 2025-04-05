@@ -3,7 +3,7 @@
 VoiceAI Platform - Main application entry point
 """
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, send_file
 from backend import create_app
 from backend.models.db import db
 import os
@@ -20,11 +20,19 @@ app = create_app()
 
 @app.route('/')
 def serve_index():
-    return send_from_directory('frontend', 'index.html')
+    return send_file('frontend/index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory('frontend', path)
+    if os.path.exists(f'frontend/{path}'):
+        return send_file(f'frontend/{path}')
+    elif os.path.exists(f'frontend/img/{path}'):
+        return send_file(f'frontend/img/{path}')
+    elif os.path.exists(f'frontend/css/{path}'):
+        return send_file(f'frontend/css/{path}')
+    elif os.path.exists(f'frontend/js/{path}'):
+        return send_file(f'frontend/js/{path}')
+    return 'File not found', 404
 
 # Use app.before_request instead of before_first_request in newer Flask versions
 @app.before_request
