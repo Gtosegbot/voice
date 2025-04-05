@@ -4,7 +4,7 @@ modules = ["nodejs-20", "python-3.11", "postgresql-16"]
 channel = "stable-24_05"
 
 [workflows]
-runButton = "Project"
+runButton = "VoiceAI App"
 
 [[workflows.workflow]]
 name = "Project"
@@ -86,6 +86,15 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "python -m http.server 5000 --bind 0.0.0.0"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "VoiceAI App"
+author = 41131785
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python app.py"
 
 [deployment]
 run = ["sh", "-c", "cd frontend && python -m http.server 5000"]

@@ -1,17 +1,13 @@
+
 """
 VoiceAI Platform - Main application entry point
 """
 
+from flask import Flask, send_from_directory
 from backend import create_app
 from backend.models.db import db
 import os
-import threading
-import json
 import logging
-import requests
-import time
-import datetime
-import uuid
 
 # Configure logging
 logging.basicConfig(
@@ -21,6 +17,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = create_app()
+
+@app.route('/')
+def serve_index():
+    return send_from_directory('frontend', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('frontend', path)
 
 # Use app.before_request instead of before_first_request in newer Flask versions
 @app.before_request
@@ -33,8 +37,8 @@ def create_tables():
         app.logger.error(f"Error creating database tables: {str(e)}")
 
 if __name__ == '__main__':
-    # Get port from environment or use default (5001)
-    port = int(os.environ.get('PORT', 5001))
+    # Get port from environment or use default (5000)
+    port = int(os.environ.get('PORT', 5000))
     
     # Run the application
     app.run(host='0.0.0.0', port=port, debug=True)
