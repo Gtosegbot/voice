@@ -20,7 +20,10 @@ app = create_app()
 
 @app.route('/')
 def serve_index():
-    return send_from_directory('frontend', 'index.html')
+    try:
+        return send_from_directory('frontend', 'index.html')
+    except:
+        return send_from_directory('.', 'index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
@@ -30,7 +33,7 @@ def serve_static(path):
         return send_from_directory('.', path)
 
 # Use app.before_request instead of before_first_request in newer Flask versions
-@app.before_request
+@app.before_first_request
 def create_tables():
     """Create database tables before first request"""
     try:
