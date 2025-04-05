@@ -20,14 +20,13 @@ app = create_app()
 
 @app.route('/')
 def serve_index():
-    return send_from_directory('frontend', 'index.html')
+    return send_file('index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
-    try:
+    if path.startswith(('css/', 'js/', 'img/')):
         return send_from_directory('frontend', path)
-    except:
-        return send_from_directory('.', path)
+    return send_from_directory('.', path)
 
 # Use app.before_request instead of before_first_request in newer Flask versions
 @app.before_request
