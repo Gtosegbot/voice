@@ -40,5 +40,8 @@ def create_tables():
         app.logger.error(f"Error creating database tables: {str(e)}")
 
 if __name__ == '__main__':
+    # Get port from environment or use default (5000)
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    
+    # Run the application
+    app.run(host='0.0.0.0', port=port, debug=True)
