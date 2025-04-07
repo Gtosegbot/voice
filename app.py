@@ -26,7 +26,10 @@ def serve_static(path):
     try:
         return send_from_directory('frontend', path)
     except:
-        return send_from_directory('frontend', 'index.html')
+        try:
+            return send_from_directory('frontend/js', path)
+        except:
+            return send_from_directory('frontend', 'index.html')
 
 # Use app.before_request instead of before_first_request in newer Flask versions
 @app.before_request
