@@ -24,11 +24,20 @@ def serve_static(path):
     if path == "":
         return send_from_directory('frontend', 'index.html')
     try:
+        # Primeiro tenta servir do diretório frontend
         return send_from_directory('frontend', path)
     except:
-        return send_from_directory('frontend', 'index.html')
+        try:
+            # Depois tenta do diretório frontend/js
+            return send_from_directory('frontend/js', path)
+        except:
+            try:
+                # Depois tenta do diretório frontend/css
+                return send_from_directory('frontend/css', path)
+            except:
+                # Se nada for encontrado, retorna o index.html
+                return send_from_directory('frontend', 'index.html')
 
-# Use app.before_request instead of before_first_request in newer Flask versions
 @app.before_request
 def create_tables():
     """Create database tables before first request"""
@@ -39,8 +48,5 @@ def create_tables():
         app.logger.error(f"Error creating database tables: {str(e)}")
 
 if __name__ == '__main__':
-    # Get port from environment or use default (5000)
     port = int(os.environ.get('PORT', 5000))
-    
-    # Run the application
     app.run(host='0.0.0.0', port=port, debug=True)
