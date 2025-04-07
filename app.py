@@ -18,16 +18,15 @@ logger = logging.getLogger(__name__)
 
 app = create_app()
 
-@app.route('/')
-def serve_index():
-    try:
-        return send_from_directory('frontend', 'index.html')
-    except:
-        return send_from_directory('.', 'index.html')
-
-@app.route('/static/<path:path>')
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory('frontend', path)
+    if path == "":
+        return send_from_directory('frontend', 'index.html')
+    try:
+        return send_from_directory('frontend', path)
+    except:
+        return send_from_directory('frontend', 'index.html')
 
 # Use app.before_request instead of before_first_request in newer Flask versions
 @app.before_request
