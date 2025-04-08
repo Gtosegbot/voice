@@ -21,25 +21,12 @@ app = create_app()
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_static(path):
-    """Serve static files from frontend directory"""
     if path == "":
         return send_from_directory('frontend', 'index.html')
     try:
         return send_from_directory('frontend', path)
     except:
-        try:
-            # Try serving from frontend/js directory
-            return send_from_directory('frontend/js', path)
-        except:
-            try:
-                # Try serving from frontend/css directory
-                return send_from_directory('frontend/css', path)
-            except:
-                # Finally try serving from frontend/img directory
-                try:
-                    return send_from_directory('frontend/img', path)
-                except:
-                    return send_from_directory('frontend', 'index.html')
+        return send_from_directory('frontend', 'index.html')
 
 # Use app.before_request instead of before_first_request in newer Flask versions
 @app.before_request
