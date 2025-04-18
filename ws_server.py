@@ -1,14 +1,14 @@
+#!/usr/bin/env python
 """
-WebSocket server for real-time communication in VoiceAI Platform
+WebSocket server para comunicação em tempo real na plataforma DisparoSeguro
 
-This server provides real-time communication between the different components
-of the VoiceAI platform, such as:
-- Frontend client applications
-- Backend server instances
-- MCP (Message Control Protocol) server
-- External integrations (Asterisk, WhatsApp, etc.)
+Este servidor fornece comunicação em tempo real entre os diferentes componentes
+da plataforma DisparoSeguro, como:
+- Aplicações cliente frontend
+- Instâncias de servidor backend
+- Integrações externas (Asterisk, WhatsApp, etc.)
 
-It acts as a message broker for real-time events and notifications.
+Ele atua como um broker de mensagens para eventos e notificações em tempo real.
 """
 
 import asyncio
@@ -18,24 +18,28 @@ import logging
 import os
 import jwt
 from datetime import datetime
+from dotenv import load_dotenv
 
-# Configure logging
+# Carregar variáveis de ambiente
+load_dotenv()
+
+# Configurar logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Configuration
+# Configuração
 PORT = int(os.environ.get('WS_PORT', 8765))
-JWT_SECRET = os.environ.get('JWT_SECRET', 'voiceai-secret-key')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'disparoseguro-default-key')
 
-# Connected clients
+# Clientes conectados
 clients = {}
 
 async def authenticate(websocket, path):
-    """Authenticate client using JWT token"""
-    # Wait for authentication message
+    """Autenticar cliente usando token JWT"""
+    # Aguardar mensagem de autenticação
     try:
         auth_msg = await asyncio.wait_for(websocket.recv(), timeout=10.0)
         auth_data = json.loads(auth_msg)
@@ -43,83 +47,82 @@ async def authenticate(websocket, path):
         if not auth_data.get('token'):
             await websocket.send(json.dumps({
                 'type': 'error',
-                'message': 'Authentication failed: Missing token'
+                'message': 'Autenticação falhou: Token ausente'
             }))
             return None
         
-        # Verify token - simplified for now due to JWT issues
+        # Verificar token - simplificado
         try:
             token = auth_data.get('token')
             
-            # Decode our simple base64 token
+            # Decodificar nosso token base64 simples
             import base64
             try:
-                # Decode the base64 token
+                # Decodificar o token base64
                 decoded_token = base64.b64decode(token).decode()
                 payload = json.loads(decoded_token)
                 
-                # Extract user ID
+                # Extrair ID do usuário
                 user_id = payload.get('sub')
                 
-                # Check if token has expired
+                # Verificar se o token expirou
                 expiration = payload.get('exp')
                 current_time = datetime.utcnow().timestamp()
                 
                 if expiration and current_time > expiration:
                     await websocket.send(json.dumps({
                         'type': 'error',
-                        'message': 'Authentication failed: Token expired'
+                        'message': 'Autenticação falhou: Token expirado'
                     }))
                     return None
                 
-                # Return user ID if authentication successful
+                # Retornar ID do usuário se autenticação for bem-sucedida
                 return user_id
                 
             except Exception:
-                # Fallback to normal JWT if it's not our base64 token
-                # This will likely fail for now, but we'll keep it for future compatibility
+                # Tentar JWT normal se não for nosso token base64
                 try:
                     payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
                     user_id = payload.get('sub')
                     return user_id
                 except:
-                    raise Exception("Invalid token format")
+                    raise Exception("Formato de token inválido")
         
         except Exception as e:
             await websocket.send(json.dumps({
                 'type': 'error',
-                'message': f'Authentication failed: {str(e)}'
+                'message': f'Autenticação falhou: {str(e)}'
             }))
             return None
     except asyncio.TimeoutError:
         await websocket.send(json.dumps({
             'type': 'error',
-            'message': 'Authentication failed: Timeout'
+            'message': 'Autenticação falhou: Timeout'
         }))
         return None
     except Exception as e:
-        logger.error(f"Authentication error: {str(e)}")
+        logger.error(f"Erro de autenticação: {str(e)}")
         await websocket.send(json.dumps({
             'type': 'error',
-            'message': f'Authentication failed: {str(e)}'
+            'message': f'Autenticação falhou: {str(e)}'
         }))
         return None
 
 async def handle_client(websocket, path):
-    """Handle WebSocket client connection"""
-    # Authenticate client
+    """Tratar conexão de cliente WebSocket"""
+    # Autenticar cliente
     user_id = await authenticate(websocket, path)
     
     if not user_id:
         return
     
-    # Store client connection
+    # Armazenar conexão do cliente
     if user_id in clients:
-        # Close existing connection
+        # Fechar conexão existente
         try:
             await clients[user_id].send(json.dumps({
                 'type': 'disconnect',
-                'message': 'New connection established'
+                'message': 'Nova conexão estabelecida'
             }))
             await clients[user_id].close()
         except Exception:
@@ -127,50 +130,50 @@ async def handle_client(websocket, path):
     
     clients[user_id] = websocket
     
-    # Send welcome message
+    # Enviar mensagem de boas-vindas
     await websocket.send(json.dumps({
         'type': 'connected',
-        'message': 'Connected to VoiceAI platform',
+        'message': 'Conectado à plataforma DisparoSeguro',
         'timestamp': datetime.utcnow().isoformat()
     }))
     
-    logger.info(f"Client connected: User ID {user_id}")
+    logger.info(f"Cliente conectado: ID de usuário {user_id}")
     
     try:
-        # Handle messages
+        # Tratar mensagens
         async for message in websocket:
             try:
                 data = json.loads(message)
                 event_type = data.get('type')
                 payload = data.get('payload')
                 
-                # Handle different event types
+                # Tratar diferentes tipos de eventos
                 if event_type == 'ping':
                     await websocket.send(json.dumps({
                         'type': 'pong',
                         'timestamp': datetime.utcnow().isoformat()
                     }))
                 else:
-                    logger.info(f"Received event: {event_type}")
-                    # Process other events as needed
+                    logger.info(f"Evento recebido: {event_type}")
+                    # Processar outros eventos conforme necessário
             except json.JSONDecodeError:
-                logger.error("Invalid JSON received")
+                logger.error("JSON inválido recebido")
                 await websocket.send(json.dumps({
                     'type': 'error',
-                    'message': 'Invalid JSON format'
+                    'message': 'Formato JSON inválido'
                 }))
     except websockets.exceptions.ConnectionClosed:
-        logger.info(f"Connection closed: User ID {user_id}")
+        logger.info(f"Conexão fechada: ID de usuário {user_id}")
     except Exception as e:
-        logger.error(f"Error handling client: {str(e)}")
+        logger.error(f"Erro ao tratar cliente: {str(e)}")
     finally:
-        # Remove client on disconnect
+        # Remover cliente ao desconectar
         if user_id in clients and clients[user_id] == websocket:
             del clients[user_id]
-            logger.info(f"Client removed: User ID {user_id}")
+            logger.info(f"Cliente removido: ID de usuário {user_id}")
 
 async def broadcast_message(event, payload):
-    """Broadcast message to all connected clients"""
+    """Transmitir mensagem para todos os clientes conectados"""
     if not clients:
         return
     
@@ -180,7 +183,7 @@ async def broadcast_message(event, payload):
         'timestamp': datetime.utcnow().isoformat()
     })
     
-    # Send to all connected clients
+    # Enviar para todos os clientes conectados
     disconnected_clients = []
     for user_id, websocket in clients.items():
         try:
@@ -188,19 +191,19 @@ async def broadcast_message(event, payload):
         except websockets.exceptions.ConnectionClosed:
             disconnected_clients.append(user_id)
         except Exception as e:
-            logger.error(f"Error sending message to client {user_id}: {str(e)}")
+            logger.error(f"Erro ao enviar mensagem para cliente {user_id}: {str(e)}")
             disconnected_clients.append(user_id)
     
-    # Remove disconnected clients
+    # Remover clientes desconectados
     for user_id in disconnected_clients:
         if user_id in clients:
             del clients[user_id]
-            logger.info(f"Client removed: User ID {user_id}")
+            logger.info(f"Cliente removido: ID de usuário {user_id}")
 
 async def send_to_user(user_id, event, payload):
-    """Send message to a specific user"""
+    """Enviar mensagem para um usuário específico"""
     if user_id not in clients:
-        logger.warning(f"User not connected: {user_id}")
+        logger.warning(f"Usuário não conectado: {user_id}")
         return False
     
     message = json.dumps({
@@ -213,26 +216,26 @@ async def send_to_user(user_id, event, payload):
         await clients[user_id].send(message)
         return True
     except websockets.exceptions.ConnectionClosed:
-        # Remove client if connection closed
+        # Remover cliente se a conexão estiver fechada
         del clients[user_id]
-        logger.info(f"Client removed: User ID {user_id}")
+        logger.info(f"Cliente removido: ID de usuário {user_id}")
         return False
     except Exception as e:
-        logger.error(f"Error sending message to client {user_id}: {str(e)}")
+        logger.error(f"Erro ao enviar mensagem para cliente {user_id}: {str(e)}")
         return False
 
 async def main():
-    """Main function to start WebSocket server"""
-    # WebSocket server port
+    """Função principal para iniciar servidor WebSocket"""
+    # Porta do servidor WebSocket
     port = int(os.environ.get('WS_PORT', 8765))
     
-    # Start WebSocket server
+    # Iniciar servidor WebSocket
     async with websockets.serve(handle_client, '0.0.0.0', port):
-        logger.info(f"WebSocket server started on port {port}")
-        await asyncio.Future()  # Run forever
+        logger.info(f"Servidor WebSocket iniciado na porta {port}")
+        await asyncio.Future()  # Executar para sempre
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Server stopped")
+        logger.info("Servidor parado")
