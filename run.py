@@ -1,3 +1,5 @@
+# Crie o arquivo run.py
+cat > run.py << 'EOL'
 #!/usr/bin/env python
 """
 Script para iniciar todos os componentes do DisparoSeguro
@@ -78,3 +80,10 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         stop_services()
         sys.exit(0)
+EOL
+
+# Torne o script executável
+chmod +x run.py
+
+# Adicione o run.py ao Git
+git add run.py
