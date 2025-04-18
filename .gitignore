@@ -1,5 +1,3 @@
-# Crie o arquivo .gitignore
-cat > .gitignore << 'EOL'
 # Ambiente e configurações
 .env
 venv/
