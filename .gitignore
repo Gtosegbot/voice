@@ -1,0 +1,47 @@
+# Crie o arquivo .gitignore
+cat > .gitignore << 'EOL'
+# Ambiente e configurações
+.env
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+Thumbs.db
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Logs e arquivos temporários
+*.log
+logs/
+tmp/
+.tmp/
+
+# Arquivos de IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Arquivos específicos do Replit
+.replit
+replit.nix
+replit.toml
+
+# Arquivos de build/compilação
+dist/
+build/
+*.egg-info/
+
+# Credenciais e segredos
+secrets.json
+config.local.js
+EOL
+
+# Adicione o .gitignore ao Git
+git add .gitignore
