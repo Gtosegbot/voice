@@ -1,14 +1,19 @@
+cat > package.json << 'EOL'
 {
-  "name": "workspace",
+  "name": "disparoseguro",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "python run.py",
+    "start:frontend": "cd frontend && python -m http.server 5000",
+    "start:backend": "cd backend && python app.py",
+    "start:ws": "cd backend && python ws_server.py",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["voice", "ai", "call", "automation", "prospecting"],
+  "author": "DisparoSeguro Team",
+  "license": "MIT",
+  "description": "Plataforma de Prospecção por Voz com IA",
   "dependencies": {
     "@sendgrid/mail": "^8.1.4",
     "@stripe/react-stripe-js": "^3.6.0",
@@ -28,3 +33,7 @@
     "stripe": "^18.0.0"
   }
 }
+EOL
+
+# Adicione o package.json atualizado ao Git
+git add package.json
