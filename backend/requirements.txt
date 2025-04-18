@@ -1,0 +1,17 @@
+# Crie o arquivo requirements.txt
+mkdir -p backend
+cat > backend/requirements.txt << 'EOL'
+Flask==2.3.3
+Flask-Cors==4.0.0
+websockets==11.0.3
+PyJWT==2.8.0
+python-dotenv==1.0.0
+openai==4.91.1
+pydub==0.25.1
+psycopg2-binary==2.9.9
+stripe==18.0.0
+sendgrid==6.10.0
+EOL
+
+# Adicione o arquivo ao Git
+git add backend/requirements.txt
