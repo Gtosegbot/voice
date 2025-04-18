@@ -3,378 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceAI - Plataforma de Prospecção por Voz</title>
+    <title>VoiceAI - Disparo Seguro</title>
+    <meta name="description" content="VoiceAI - Plataforma de Prospecção por Voz do Disparo Seguro">
+    <link rel="icon" href="https://disparoseguro.shop/favicon.ico" type="image/x-icon">
+    <meta property="og:title" content="VoiceAI - Disparo Seguro">
+    <meta property="og:description" content="Plataforma de automação de chamadas e prospecção por voz">
+    <meta property="og:url" content="https://disparoseguro.shop">
+    <link rel="canonical" href="https://disparoseguro.shop">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #4e73df;
-            --secondary: #6c757d;
-            --success: #1cc88a;
-            --info: #36b9cc;
-            --warning: #f6c23e;
-            --danger: #e74a3b;
-            --light: #f8f9fc;
-            --dark: #5a5c69;
-        }
-        
-        body {
-            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f8f9fc;
-        }
-        
-        .app-container {
-            display: flex;
-            min-height: 100vh;
-        }
-        
-        .sidebar {
-            width: 250px;
-            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            transition: width 0.3s;
-            position: fixed;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            z-index: 10;
-        }
-        
-        .sidebar-header {
-            padding: 1.5rem 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        
-        .sidebar-header h3 {
-            margin: 0;
-            margin-left: 0.5rem;
-            font-weight: 700;
-            font-size: 1.2rem;
-        }
-        
-        .logo {
-            width: 40px;
-            height: 40px;
-        }
-        
-        .sidebar-nav {
-            padding: 1rem 0;
-            flex-grow: 1;
-        }
-        
-        .sidebar-nav ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .sidebar-nav-item {
-            padding: 0.8rem 1.5rem;
-            display: flex;
-            align-items: center;
-            color: rgba(255, 255, 255, 0.8);
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        
-        .sidebar-nav-item i {
-            width: 20px;
-            margin-right: 0.8rem;
-            text-align: center;
-        }
-        
-        .sidebar-nav-item.active, .sidebar-nav-item:hover {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-left: 4px solid white;
-        }
-        
-        .sidebar-footer {
-            padding: 1rem;
-            text-align: center;
-            border-top: 1px solid rgba(255, 255, 255, 0.15);
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .main-content {
-            flex-grow: 1;
-            margin-left: 250px;
-            padding: 2rem;
-            transition: margin-left 0.3s;
-        }
-        
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.5rem 2rem;
-            background-color: white;
-            border-bottom: 1px solid #e3e6f0;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-        }
-        
-        .topbar-left {
-            display: flex;
-            align-items: center;
-        }
-        
-        .toggle-sidebar {
-            border: none;
-            background: none;
-            color: #4e73df;
-            font-size: 1.5rem;
-            cursor: pointer;
-            margin-right: 1rem;
-        }
-        
-        .search-bar {
-            display: flex;
-            align-items: center;
-            background-color: #f8f9fc;
-            border-radius: 20px;
-            padding: 0.2rem 1rem;
-        }
-        
-        .search-bar input {
-            border: none;
-            background-color: transparent;
-            padding: 0.5rem;
-            outline: none;
-            width: 300px;
-        }
-        
-        .search-bar button {
-            border: none;
-            background: none;
-            color: #4e73df;
-            cursor: pointer;
-        }
-        
-        .user-menu {
-            display: flex;
-            align-items: center;
-        }
-        
-        .user-menu .dropdown-toggle {
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-            color: #5a5c69;
-        }
-        
-        .user-avatar {
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 50%;
-            margin-right: 0.5rem;
-        }
-        
-        .user-name {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        .notification-badge {
-            position: relative;
-            color: #5a5c69;
-            margin-right: 1.5rem;
-        }
-        
-        .badge-counter {
-            position: absolute;
-            transform: scale(0.7);
-            transform-origin: top right;
-            right: -0.5rem;
-            margin-top: -0.5rem;
-            background-color: #e74a3b;
-            color: white;
-            border-radius: 50%;
-            padding: 0.15rem 0.4rem;
-            font-size: 0.75rem;
-        }
-        
-        .nav-divider {
-            width: 0;
-            border-right: 1px solid #e3e6f0;
-            height: 2rem;
-            margin: 0 1rem;
-        }
-        
-        .card {
-            margin-bottom: 1.5rem;
-            border: none;
-            border-radius: 0.35rem;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-        }
-        
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #e3e6f0;
-        }
-        
-        .card-header h6 {
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            font-size: 0.8rem;
-            color: #4e73df;
-            margin: 0;
-        }
-        
-        .card-body {
-            padding: 1.25rem;
-        }
-        
-        .stat-card {
-            border-left: 0.25rem solid;
-            border-radius: 0.35rem;
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-            margin-bottom: 1.5rem;
-            padding: 1.25rem;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            word-wrap: break-word;
-            background-color: #fff;
-            background-clip: border-box;
-        }
-        
-        .stat-card-primary {
-            border-left-color: #4e73df;
-        }
-        
-        .stat-card-success {
-            border-left-color: #1cc88a;
-        }
-        
-        .stat-card-info {
-            border-left-color: #36b9cc;
-        }
-        
-        .stat-card-warning {
-            border-left-color: #f6c23e;
-        }
-        
-        .stat-card-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .stat-card-content-left {
-            flex-grow: 1;
-        }
-        
-        .stat-card-title {
-            color: #5a5c69;
-            text-transform: uppercase;
-            font-size: 0.7rem;
-            font-weight: bold;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.25rem;
-        }
-        
-        .stat-card-value {
-            color: #5a5c69;
-            font-size: 1.5rem;
-            font-weight: 700;
-            line-height: 1;
-            margin-bottom: 0;
-        }
-        
-        .stat-card-icon {
-            color: #dddfeb;
-            font-size: 2rem;
-        }
-        
-        .stat-card-progress {
-            margin-top: 1rem;
-            font-size: 0.75rem;
-            height: 0.75rem;
-        }
-        
-        .chart-area, .chart-bar, .chart-pie {
-            position: relative;
-            height: 300px;
-        }
-        
-        table.dataTable {
-            width: 100% !important;
-        }
-        
-        .new-call-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: #4e73df;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-            z-index: 9;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .new-call-btn:hover {
-            background-color: #2e59d9;
-            transform: scale(1.05);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100px;
-            }
-            
-            .sidebar-header h3, .sidebar-nav-item span {
-                display: none;
-            }
-            
-            .sidebar-nav-item {
-                justify-content: center;
-                padding: 1rem;
-            }
-            
-            .sidebar-nav-item i {
-                margin-right: 0;
-            }
-            
-            .main-content {
-                margin-left: 100px;
-            }
-            
-            .search-bar input {
-                width: 150px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="css/unified.css">
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <img src="img/logo.svg" alt="VoiceAI Logo" class="logo">
-                <h3>VoiceAI</h3>
+                <img src="https://disparoseguro.shop/img/logo.svg" alt="DisparoSeguro Logo" class="logo" onerror="this.onerror=null; this.src='https://disparoseguro.shop/img/logo-fallback.png'">
+                <h3>DisparoSeguro</h3>
             </div>
             <nav class="sidebar-nav">
                 <ul>
@@ -393,6 +39,10 @@
                     <li class="sidebar-nav-item" data-page="campaigns" id="sidebar-campaigns">
                         <i class="fas fa-bullhorn"></i>
                         <span>Campanhas</span>
+                    </li>
+                    <li class="sidebar-nav-item" data-page="voice" id="sidebar-voice">
+                        <i class="fas fa-microphone"></i>
+                        <span>Tecnologia de Voz</span>
                     </li>
                     <li class="sidebar-nav-item" data-page="crm" id="sidebar-crm">
                         <i class="fas fa-address-card"></i>
@@ -421,7 +71,7 @@
                 </ul>
             </nav>
             <div class="sidebar-footer">
-                VoiceAI Platform v1.0
+                DisparoSeguro.shop v1.0
             </div>
         </aside>
 
@@ -452,7 +102,7 @@
                     <div class="nav-divider"></div>
                     <div class="dropdown">
                         <a href="#" class="dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown">
-                            <img class="user-avatar" src="img/avatar-placeholder.jpg" alt="User Avatar">
+                            <img class="user-avatar" src="https://disparoseguro.shop/img/avatar-placeholder.jpg" alt="User Avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Admin&background=4e73df&color=fff'">
                             <span class="user-name d-none d-lg-inline">Admin</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
@@ -469,7 +119,7 @@
             <!-- Page Content -->
             <div id="page-content">
                 <!-- Dashboard Content -->
-                <div id="dashboard-content">
+                <div id="dashboard-content" class="page-section active">
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
                         <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
                         <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
@@ -664,6 +314,128 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Leads Content -->
+                <div id="leads-content" class="page-section">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Gerenciamento de Leads</h1>
+                        <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                            <i class="fas fa-plus fa-sm text-white-50"></i> Adicionar Lead
+                        </button>
+                    </div>
+                    
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-primary">Lista de Leads</h6>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-2">
+                                    <i class="fas fa-file-export fa-sm"></i> Exportar
+                                </button>
+                                <button class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-file-import fa-sm"></i> Importar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Conteúdo da tabela de leads (mantido) -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Outras seções -->
+                <div id="conversations-content" class="page-section">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Histórico de Conversas</h1>
+                        <button class="btn btn-sm btn-primary shadow-sm">
+                            <i class="fas fa-filter fa-sm text-white-50"></i> Filtrar
+                        </button>
+                    </div>
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Conversas Recentes</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-4">Esta seção exibirá o histórico de chamadas e conversas realizadas pela plataforma. Aqui você poderá reproduzir gravações e analisar transcrições de diálogos.</p>
+                            <div class="alert alert-info">
+                                Funcionalidade em desenvolvimento. Novas atualizações em breve!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Seção Voice (Tecnologia de Voz) -->
+                <div id="voice-content" class="page-section">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Tecnologia de Voz</h1>
+                        <div>
+                            <a href="voz/" class="btn btn-sm btn-primary shadow-sm me-2">
+                                <i class="fas fa-microphone fa-sm text-white-50"></i> Abrir Interface de Voz
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Reconhecimento e Síntese de Voz</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-4">A tecnologia de voz do DisparoSeguro utiliza algoritmos avançados de IA para processamento de linguagem natural, reconhecimento de voz e síntese de fala.</p>
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <div class="card mb-4">
+                                        <div class="card-header py-3">
+                                            <h6 class="m-0 font-weight-bold text-primary">Recursos Disponíveis</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <ul class="list-group">
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Reconhecimento de Voz
+                                                    <span class="badge bg-success rounded-pill">Ativo</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Síntese de Voz Natural
+                                                    <span class="badge bg-success rounded-pill">Ativo</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Análise de Sentimento
+                                                    <span class="badge bg-success rounded-pill">Ativo</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Transcrição Automática
+                                                    <span class="badge bg-success rounded-pill">Ativo</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Detecção de Intenção
+                                                    <span class="badge bg-warning rounded-pill">Beta</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="alert alert-primary">
+                                        <h5 class="alert-heading">Interface Completa de Voz</h5>
+                                        <p>Para acessar todas as funcionalidades de voz, utilize a Interface de Voz completa.</p>
+                                        <hr>
+                                        <p class="mb-0">
+                                            <a href="voz/" class="btn btn-primary">
+                                                <i class="fas fa-external-link-alt"></i> Acessar Interface de Voz
+                                            </a>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Seções adicionais mantidas do original -->
+                <div id="campaigns-content" class="page-section"></div>
+                <div id="crm-content" class="page-section"></div>
+                <div id="analytics-content" class="page-section"></div>
+                <div id="flow-builder-content" class="page-section"></div>
+                <div id="ai-models-content" class="page-section"></div>
+                <div id="integrations-content" class="page-section"></div>
+                <div id="settings-content" class="page-section"></div>
             </div>
         </div>
     </div>
@@ -679,107 +451,327 @@
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar gráficos
-        const callsCtx = document.getElementById('callsChart').getContext('2d');
-        const statusCtx = document.getElementById('statusChart').getContext('2d');
-        
-        // Gráfico de linha para chamadas
-        const callsChart = new Chart(callsCtx, {
-            type: 'line',
-            data: {
-                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'],
-                datasets: [{
-                    label: 'Chamadas Realizadas',
-                    lineTension: 0.3,
-                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
-                    borderColor: 'rgba(78, 115, 223, 1)',
-                    pointRadius: 3,
-                    pointBackgroundColor: 'rgba(78, 115, 223, 1)',
-                    pointBorderColor: 'rgba(78, 115, 223, 1)',
-                    pointHoverRadius: 5,
-                    pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
-                    pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
-                    pointHitRadius: 10,
-                    pointBorderWidth: 2,
-                    data: [1200, 1800, 2400, 3200, 4000, 4500, 5200],
-                }],
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false,
-                            drawBorder: false
+        // Função para adicionar eventos a todos os botões
+        function adicionarEventosBotoes() {
+            // Adicionar eventos a todos os botões na aplicação
+            document.querySelectorAll('button:not([data-event-added])').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // Evita comportamento padrão para links
+                    e.preventDefault();
+                    
+                    // Adiciona classe para efeito visual
+                    this.classList.add('clicked');
+                    setTimeout(() => {
+                        this.classList.remove('clicked');
+                    }, 500);
+                    
+                    // Mensagem no console para debugging
+                    console.log('Botão clicado:', this.innerText || this.innerHTML);
+                    
+                    // Alerta para o usuário
+                    if (this.innerText && this.innerText.trim() !== '') {
+                        alert(`Ação: ${this.innerText.trim()}`);
+                    } else if (this.querySelector('i')) {
+                        // Para botões com apenas ícones
+                        const iconeClasse = this.querySelector('i').className;
+                        if (iconeClasse.includes('eye')) {
+                            alert('Visualizar detalhes');
+                        } else if (iconeClasse.includes('edit') || iconeClasse.includes('pencil')) {
+                            alert('Editar item');
+                        } else if (iconeClasse.includes('trash') || iconeClasse.includes('times')) {
+                            alert('Excluir/Cancelar item');
+                        } else if (iconeClasse.includes('phone')) {
+                            alert('Iniciar chamada');
+                        } else if (iconeClasse.includes('download')) {
+                            alert('Download/Exportar dados');
+                        } else if (iconeClasse.includes('plus')) {
+                            alert('Adicionar novo item');
+                        } else if (iconeClasse.includes('search')) {
+                            alert('Pesquisar');
+                        } else if (iconeClasse.includes('bars')) {
+                            // Não faz nada pois tem tratamento especial
+                        } else {
+                            alert('Ação executada com sucesso!');
                         }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            maxTicksLimit: 5,
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)',
+                    } else {
+                        alert('Ação executada com sucesso!');
+                    }
+                });
+                
+                // Marca o botão como já tendo recebido evento
+                button.setAttribute('data-event-added', 'true');
+            });
+            
+            // Adicionar eventos a todos os links na aplicação
+            document.querySelectorAll('a:not([data-event-added])').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Se não for link para a interface de voz, previne o comportamento padrão
+                    if (!this.href.includes('/voz/')) {
+                        e.preventDefault();
+                        
+                        // Adiciona classe para efeito visual
+                        this.classList.add('clicked');
+                        setTimeout(() => {
+                            this.classList.remove('clicked');
+                        }, 500);
+                        
+                        // Mensagem no console para debugging
+                        console.log('Link clicado:', this.innerText || this.innerHTML);
+                        
+                        // Alerta para dropdown do usuário
+                        if (this.closest('.dropdown-menu')) {
+                            alert(`Menu: ${this.innerText.trim()}`);
+                        } else {
+                            alert(`Link: ${this.innerText.trim() || 'Navegação'}`);
                         }
                     }
-                }
-            }
-        });
-        
-        // Gráfico de pizza para status
-        const statusChart = new Chart(statusCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Concluídas', 'Agendadas', 'Não Atendidas', 'Canceladas'],
-                datasets: [{
-                    data: [55, 15, 20, 10],
-                    backgroundColor: ['#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
-                    hoverBackgroundColor: ['#169a6f', '#2c9faf', '#dda20a', '#be3a2d'],
-                    hoverBorderColor: "rgba(234, 236, 244, 1)",
-                }],
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
+                });
+                
+                // Marca o link como já tendo recebido evento
+                link.setAttribute('data-event-added', 'true');
+            });
+            
+            // Adicionar eventos para badges e notificações
+            document.querySelectorAll('.notification-badge:not([data-event-added]), .badge:not([data-event-added])').forEach(badge => {
+                badge.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Adiciona classe para efeito visual
+                    this.classList.add('clicked');
+                    setTimeout(() => {
+                        this.classList.remove('clicked');
+                    }, 500);
+                    
+                    if (this.querySelector('.fa-bell')) {
+                        alert('Notificações: 3 novas notificações');
+                    } else if (this.querySelector('.fa-envelope')) {
+                        alert('Mensagens: 7 novas mensagens');
+                    } else {
+                        alert('Informação visualizada');
                     }
-                },
-                cutout: '60%',
-            }
-        });
+                });
+                
+                badge.setAttribute('data-event-added', 'true');
+            });
+        }
         
-        // Alternar menu lateral
-        document.querySelector('.toggle-sidebar').addEventListener('click', function() {
-            document.querySelector('.sidebar').classList.toggle('minimized');
-            document.querySelector('.main-content').classList.toggle('expanded');
-        });
-        
-        // Navegação do sidebar
+        // Navegação do sidebar - atualizada para mostrar as seções corretas
         const navItems = document.querySelectorAll('.sidebar-nav-item');
         navItems.forEach(item => {
             item.addEventListener('click', function() {
+                // Adiciona classe para efeito visual
+                this.classList.add('clicked');
+                setTimeout(() => {
+                    this.classList.remove('clicked');
+                }, 500);
+                
                 // Remover classe ativa de todos os itens
                 navItems.forEach(i => i.classList.remove('active'));
+                
                 // Adicionar classe ativa ao item clicado
                 this.classList.add('active');
                 
-                // Aqui você pode implementar a navegação entre páginas
+                // Obter a página a ser exibida
                 const page = this.getAttribute('data-page');
                 console.log(`Navegando para: ${page}`);
+                
+                // Esconder todas as seções
+                document.querySelectorAll('.page-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Mostrar a seção correspondente
+                const pageSection = document.getElementById(`${page}-content`);
+                if (pageSection) {
+                    pageSection.classList.add('active');
+                }
+                
+                // Alerta para navegação
+                alert(`Navegando para seção: ${page}`);
             });
         });
         
-        // Botão de nova chamada
-        document.getElementById('new-call-btn').addEventListener('click', function() {
-            alert('Iniciando nova chamada...');
-            // Aqui você implementaria a lógica para iniciar uma nova chamada
+        // Configura o botão de toggle do menu
+        const toggleSidebarBtn = document.querySelector('.toggle-sidebar');
+        if (toggleSidebarBtn) {
+            toggleSidebarBtn.addEventListener('click', function() {
+                // Adiciona classe para efeito visual
+                this.classList.add('clicked');
+                setTimeout(() => {
+                    this.classList.remove('clicked');
+                }, 500);
+                
+                const sidebar = document.querySelector('.sidebar');
+                const mainContent = document.querySelector('.main-content');
+                
+                sidebar.classList.toggle('minimized');
+                if (sidebar.classList.contains('minimized')) {
+                    sidebar.style.width = '100px';
+                    mainContent.style.marginLeft = '100px';
+                    
+                    // Esconder textos
+                    document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                    
+                    // Centralizar ícones
+                    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+                        el.style.justifyContent = 'center';
+                        el.style.padding = '1rem';
+                    });
+                    
+                    document.querySelectorAll('.sidebar-nav-item i').forEach(el => {
+                        el.style.marginRight = '0';
+                    });
+                    
+                    // Mostrar alerta
+                    alert('Menu lateral minimizado');
+                } else {
+                    sidebar.style.width = '250px';
+                    mainContent.style.marginLeft = '250px';
+                    
+                    // Mostrar textos
+                    document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3').forEach(el => {
+                        el.style.display = 'inline';
+                    });
+                    
+                    // Voltar layout dos itens
+                    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+                        el.style.justifyContent = 'flex-start';
+                        el.style.padding = '0.8rem 1.5rem';
+                    });
+                    
+                    document.querySelectorAll('.sidebar-nav-item i').forEach(el => {
+                        el.style.marginRight = '0.8rem';
+                    });
+                    
+                    // Mostrar alerta
+                    alert('Menu lateral expandido');
+                }
+            });
+        }
+        
+        // Ativa o botão de nova chamada
+        const newCallBtn = document.getElementById('new-call-btn');
+        if (newCallBtn) {
+            newCallBtn.addEventListener('click', function() {
+                this.classList.add('clicked');
+                setTimeout(() => {
+                    this.classList.remove('clicked');
+                }, 500);
+                
+                alert('Iniciando nova chamada...');
+            });
+        }
+        
+        // Inicializar gráficos
+        const callsCtx = document.getElementById('callsChart');
+        const statusCtx = document.getElementById('statusChart');
+        
+        if (callsCtx) {
+            // Gráfico de linha para chamadas
+            const callsChart = new Chart(callsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'],
+                    datasets: [{
+                        label: 'Chamadas Realizadas',
+                        lineTension: 0.3,
+                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                        borderColor: 'rgba(78, 115, 223, 1)',
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        pointBorderColor: 'rgba(78, 115, 223, 1)',
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                        pointHitRadius: 10,
+                        pointBorderWidth: 2,
+                        data: [1200, 1800, 2400, 3200, 4000, 4500, 5200],
+                    }],
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                maxTicksLimit: 5,
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        if (statusCtx) {
+            // Gráfico de pizza para status
+            const statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Concluídas', 'Agendadas', 'Não Atendidas', 'Canceladas'],
+                    datasets: [{
+                        data: [55, 15, 20, 10],
+                        backgroundColor: ['#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
+                        hoverBackgroundColor: ['#169a6f', '#2c9faf', '#dda20a', '#be3a2d'],
+                        hoverBorderColor: "rgba(234, 236, 244, 1)",
+                    }],
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    cutout: '60%',
+                }
+            });
+        }
+        
+        // Inicializar tooltips do Bootstrap
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        if (typeof bootstrap !== 'undefined') {
+            const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        }
+        
+        // Adicionar eventos iniciais
+        adicionarEventosBotoes();
+        
+        // Verificar se as imagens foram carregadas corretamente
+        document.querySelectorAll('img').forEach(img => {
+            img.addEventListener('error', function() {
+                console.log('Erro ao carregar imagem:', this.src);
+                if (this.classList.contains('logo') && !this.getAttribute('data-fallback-applied')) {
+                    this.setAttribute('data-fallback-applied', 'true');
+                    this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgMS45OTJoM2EyIDIgMCAwIDEgMiAydjE2YTIgMiAwIDAgMS0yIDJIOGEyIDIgMCAwIDEtMi0ydi0xNmEyIDIgMCAwIDEgMi0yaDF2LTJoMnYyeiI+PC9wYXRoPjxyZWN0IHg9IjkiIHk9IjEzIiB3aWR0aD0iNCIgaGVpZ2h0PSI2Ij48L3JlY3Q+PGNpcmNsZSBjeD0iMTEiIGN5PSI4IiByPSIyIj48L2NpcmNsZT48L3N2Zz4=';
+                } else if (this.classList.contains('user-avatar') && !this.getAttribute('data-fallback-applied')) {
+                    this.setAttribute('data-fallback-applied', 'true');
+                    this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjNGU3M2RmIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0iZmVhdGhlciBmZWF0aGVyLXVzZXIiPjxwYXRoIGQ9Ik0yMCAyMXYtMmE0IDQgMCAwIDAtNC00SDhhNCA0IDAgMCAwLTQgNHYyIj48L3BhdGg+PGNpcmNsZSBjeD0iMTIiIGN5PSI3IiByPSI0Ij48L2NpcmNsZT48L3N2Zz4=';
+                }
+            });
         });
+        
+        // Mostrar mensagem de boas-vindas com domínio correto
+        setTimeout(() => {
+            alert('Bem-vindo à Plataforma DisparoSeguro.shop!\n\nTodos os botões e elementos são clicáveis e mostrarão alertas para demonstrar a funcionalidade.');
+        }, 1000);
     });
     </script>
 </body>
