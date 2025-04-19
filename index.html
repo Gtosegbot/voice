@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceAI - Disparo Seguro</title>
-    <meta name="description" content="VoiceAI - Plataforma de Prospecção por Voz do Disparo Seguro">
+    <title>DisparoSeguro - Mini CRM com Automação de Comunicações</title>
+    <meta name="description" content="DisparoSeguro - Plataforma completa de automação de comunicações com CRM integrado">
     <link rel="icon" href="https://disparoseguro.shop/favicon.ico" type="image/x-icon">
-    <meta property="og:title" content="VoiceAI - Disparo Seguro">
-    <meta property="og:description" content="Plataforma de automação de chamadas e prospecção por voz">
+    <meta property="og:title" content="DisparoSeguro - Automação de Comunicações">
+    <meta property="og:description" content="CRM com automação de chamadas, WhatsApp, SMS e emails para vendas inteligentes">
     <meta property="og:url" content="https://disparoseguro.shop">
     <link rel="canonical" href="https://disparoseguro.shop">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -24,7 +24,7 @@
             </div>
             <nav class="sidebar-nav">
                 <ul>
-                    <li class="sidebar-nav-item active" data-page="dashboard" id="sidebar-dashboard">
+                    <li class="sidebar-nav-item" data-page="dashboard" id="sidebar-dashboard">
                         <i class="fas fa-tachometer-alt"></i>
                         <span>Dashboard</span>
                     </li>
@@ -32,9 +32,9 @@
                         <i class="fas fa-user-tie"></i>
                         <span>Leads</span>
                     </li>
-                    <li class="sidebar-nav-item" data-page="conversations" id="sidebar-conversations">
-                        <i class="fas fa-comments"></i>
-                        <span>Conversas</span>
+                    <li class="sidebar-nav-item" data-page="communications" id="sidebar-communications">
+                        <i class="fas fa-comment-dots"></i>
+                        <span>Comunicações</span>
                     </li>
                     <li class="sidebar-nav-item" data-page="campaigns" id="sidebar-campaigns">
                         <i class="fas fa-bullhorn"></i>
@@ -44,25 +44,29 @@
                         <i class="fas fa-microphone"></i>
                         <span>Tecnologia de Voz</span>
                     </li>
-                    <li class="sidebar-nav-item" data-page="crm" id="sidebar-crm">
+                    <li class="sidebar-nav-item active" data-page="crm" id="sidebar-crm">
                         <i class="fas fa-address-card"></i>
                         <span>Mini CRM</span>
+                    </li>
+                    <li class="sidebar-nav-item" data-page="templates" id="sidebar-templates">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Templates</span>
+                    </li>
+                    <li class="sidebar-nav-item" data-page="tags" id="sidebar-tags">
+                        <i class="fas fa-tags"></i>
+                        <span>Tags</span>
                     </li>
                     <li class="sidebar-nav-item" data-page="analytics" id="sidebar-analytics">
                         <i class="fas fa-chart-line"></i>
                         <span>Análises</span>
                     </li>
-                    <li class="sidebar-nav-item" data-page="flow-builder" id="sidebar-flow-builder">
-                        <i class="fas fa-sitemap"></i>
-                        <span>Construtor de Fluxo</span>
+                    <li class="sidebar-nav-item" data-page="automations" id="sidebar-automations">
+                        <i class="fas fa-robot"></i>
+                        <span>Automações</span>
                     </li>
-                    <li class="sidebar-nav-item" data-page="ai-models" id="sidebar-ai-models">
-                        <i class="fas fa-brain"></i>
-                        <span>Modelos de IA</span>
-                    </li>
-                    <li class="sidebar-nav-item" data-page="integrations" id="sidebar-integrations">
+                    <li class="sidebar-nav-item" data-page="webhooks" id="sidebar-webhooks">
                         <i class="fas fa-plug"></i>
-                        <span>Integrações</span>
+                        <span>Webhooks</span>
                     </li>
                     <li class="sidebar-nav-item" data-page="settings" id="sidebar-settings">
                         <i class="fas fa-cog"></i>
@@ -71,7 +75,7 @@
                 </ul>
             </nav>
             <div class="sidebar-footer">
-                DisparoSeguro.shop v1.0
+                DisparoSeguro.shop v2.0
             </div>
         </aside>
 
@@ -84,7 +88,7 @@
                         <i class="fas fa-bars"></i>
                     </button>
                     <div class="search-bar">
-                        <input type="text" placeholder="Pesquisar...">
+                        <input type="text" placeholder="Pesquisar leads, contatos...">
                         <button type="button">
                             <i class="fas fa-search"></i>
                         </button>
@@ -118,194 +122,754 @@
 
             <!-- Page Content -->
             <div id="page-content">
-                <!-- Dashboard Content -->
-                <div id="dashboard-content" class="page-section active">
+                <!-- CRM Content (Ativo por padrão) -->
+                <div id="crm-content" class="page-section active">
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-                        <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-                            <i class="fas fa-download fa-sm text-white-50"></i> Gerar Relatório
+                        <h1 class="h3 mb-0 text-gray-800">Mini CRM</h1>
+                        <div>
+                            <button class="btn btn-sm btn-primary me-2" id="new-contact-btn">
+                                <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Novo Contato
+                            </button>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="importExportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-exchange-alt fa-sm me-1"></i> Importar/Exportar
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="importExportDropdown">
+                                    <li><a class="dropdown-item" href="#" id="export-contacts-btn">
+                                        <i class="fas fa-file-export fa-sm fa-fw me-2 text-gray-400"></i>
+                                        Exportar Contatos
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" id="import-contacts-btn">
+                                        <i class="fas fa-file-import fa-sm fa-fw me-2 text-gray-400"></i>
+                                        Importar Contatos
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Container para ações em massa -->
+                    <div id="bulk-actions-container" class="mb-3">
+                        <div class="card mb-3 d-none" id="bulk-actions-card">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <span class="fw-bold" id="selected-count">0</span> contatos selecionados
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            Ações
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><h6 class="dropdown-header">Comunicação</h6></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-call">Ligar</a></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-email">Enviar Email</a></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-sms">Enviar SMS</a></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-whatsapp">Enviar WhatsApp</a></li>
+                                            <li><div class="dropdown-divider"></div></li>
+                                            <li><h6 class="dropdown-header">Classificação</h6></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-status">Alterar Status</a></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-tag">Adicionar Tag</a></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-temperature">Definir Temperatura</a></li>
+                                            <li><div class="dropdown-divider"></div></li>
+                                            <li><h6 class="dropdown-header">Automação</h6></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-schedule">Agendar Contato</a></li>
+                                            <li><a class="dropdown-item" href="#" id="bulk-sequence">Iniciar Sequência</a></li>
+                                            <li><div class="dropdown-divider"></div></li>
+                                            <li><a class="dropdown-item text-danger" href="#" id="bulk-delete">Excluir</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-xl-12 col-lg-12">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Contatos</h6>
+                                    <div class="dropdown no-arrow">
+                                        <a class="dropdown-toggle" href="#" role="button" id="contactsDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="contactsDropdown">
+                                            <a class="dropdown-item" href="#" id="refresh-contacts-btn">
+                                                <i class="fas fa-sync fa-sm fa-fw me-2 text-gray-400"></i>
+                                                Atualizar Lista
+                                            </a>
+                                            <a class="dropdown-item" href="#" id="manage-tags-btn">
+                                                <i class="fas fa-tags fa-sm fa-fw me-2 text-gray-400"></i>
+                                                Gerenciar Tags
+                                            </a>
+                                            <a class="dropdown-item" href="#" id="manage-templates-btn">
+                                                <i class="fas fa-file-alt fa-sm fa-fw me-2 text-gray-400"></i>
+                                                Gerenciar Templates
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="contacts-filter mb-3">
+                                        <div class="row g-2">
+                                            <div class="col-md-3">
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control bg-light border-0 small" placeholder="Buscar contatos..." id="search-contacts">
+                                                    <button class="btn btn-primary" type="button" id="search-btn">
+                                                        <i class="fas fa-search fa-sm"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select class="form-select" id="filter-status">
+                                                    <option value="">Todos os Status</option>
+                                                    <option value="novo">Novo</option>
+                                                    <option value="contato">Em Contato</option>
+                                                    <option value="qualificado">Qualificado</option>
+                                                    <option value="proposta">Proposta</option>
+                                                    <option value="ganho">Cliente</option>
+                                                    <option value="perdido">Perdido</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select class="form-select" id="filter-tag">
+                                                    <option value="">Todas as Tags</option>
+                                                    <option value="1">Cliente VIP</option>
+                                                    <option value="2">Novo Lead</option>
+                                                    <option value="3">Follow-up Pendente</option>
+                                                    <option value="4">Oportunidade</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select class="form-select" id="filter-temperature">
+                                                    <option value="">Temperatura</option>
+                                                    <option value="hot">Quente</option>
+                                                    <option value="warm">Morno</option>
+                                                    <option value="cold">Frio</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select class="form-select" id="filter-follow-up">
+                                                    <option value="">Follow-up</option>
+                                                    <option value="today">Hoje</option>
+                                                    <option value="tomorrow">Amanhã</option>
+                                                    <option value="this_week">Esta Semana</option>
+                                                    <option value="overdue">Atrasado</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button class="btn btn-outline-secondary w-100" id="clear-filters-btn">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-hover" id="contacts-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" id="select-all-contacts">
+                                                        </div>
+                                                    </th>
+                                                    <th>Nome</th>
+                                                    <th>Empresa</th>
+                                                    <th>Status</th>
+                                                    <th>Tags</th>
+                                                    <th>Temperatura</th>
+                                                    <th>Próx. Contato</th>
+                                                    <th>Telefone</th>
+                                                    <th>Email</th>
+                                                    <th>Ações</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input contact-checkbox" type="checkbox" value="1">
+                                                        </div>
+                                                    </td>
+                                                    <td><a href="#" class="contact-link" data-contact-id="1">João Silva</a></td>
+                                                    <td>Empresa ABC</td>
+                                                    <td><span class="badge bg-success">Qualificado</span></td>
+                                                    <td>
+                                                        <span class="contact-tag" style="background-color: #4e73df">Cliente VIP</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="temperature-indicator" style="color: #dc3545">
+                                                            <i class="fas fa-fire"></i>
+                                                            Quente
+                                                        </span>
+                                                    </td>
+                                                    <td>Hoje, 14:30</td>
+                                                    <td>(11) 98765-4321</td>
+                                                    <td>joao.silva@abc.com</td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary contact-call-btn" data-contact-id="1" title="Ligar">
+                                                                <i class="fas fa-phone"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-success contact-whatsapp-btn" data-contact-id="1" title="WhatsApp">
+                                                                <i class="fab fa-whatsapp"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-info contact-email-btn" data-contact-id="1" title="Email">
+                                                                <i class="fas fa-envelope"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-secondary contact-note-btn" data-contact-id="1" title="Adicionar Nota">
+                                                                <i class="fas fa-sticky-note"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-dark contact-edit-btn" data-contact-id="1" title="Editar">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input contact-checkbox" type="checkbox" value="2">
+                                                        </div>
+                                                    </td>
+                                                    <td><a href="#" class="contact-link" data-contact-id="2">Maria Oliveira</a></td>
+                                                    <td>Tech Solutions</td>
+                                                    <td><span class="badge bg-warning">Proposta</span></td>
+                                                    <td>
+                                                        <span class="contact-tag" style="background-color: #f6c23e">Follow-up Pendente</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="temperature-indicator" style="color: #fd7e14">
+                                                            <i class="fas fa-temperature-high"></i>
+                                                            Morno
+                                                        </span>
+                                                    </td>
+                                                    <td>Amanhã, 10:15</td>
+                                                    <td>(21) 99876-5432</td>
+                                                    <td>maria@techsolutions.com</td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary contact-call-btn" data-contact-id="2" title="Ligar">
+                                                                <i class="fas fa-phone"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-success contact-whatsapp-btn" data-contact-id="2" title="WhatsApp">
+                                                                <i class="fab fa-whatsapp"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-info contact-email-btn" data-contact-id="2" title="Email">
+                                                                <i class="fas fa-envelope"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-secondary contact-note-btn" data-contact-id="2" title="Adicionar Nota">
+                                                                <i class="fas fa-sticky-note"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-dark contact-edit-btn" data-contact-id="2" title="Editar">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input contact-checkbox" type="checkbox" value="3">
+                                                        </div>
+                                                    </td>
+                                                    <td><a href="#" class="contact-link" data-contact-id="3">Carlos Santos</a></td>
+                                                    <td>Global Corp</td>
+                                                    <td><span class="badge bg-info">Novo</span></td>
+                                                    <td>
+                                                        <span class="contact-tag" style="background-color: #1cc88a">Novo Lead</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="temperature-indicator" style="color: #0d6efd">
+                                                            <i class="fas fa-snowflake"></i>
+                                                            Frio
+                                                        </span>
+                                                    </td>
+                                                    <td>05/04/2025</td>
+                                                    <td>(31) 97654-3210</td>
+                                                    <td>carlos@globalcorp.com</td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary contact-call-btn" data-contact-id="3" title="Ligar">
+                                                                <i class="fas fa-phone"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-success contact-whatsapp-btn" data-contact-id="3" title="WhatsApp">
+                                                                <i class="fab fa-whatsapp"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-info contact-email-btn" data-contact-id="3" title="Email">
+                                                                <i class="fas fa-envelope"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-secondary contact-note-btn" data-contact-id="3" title="Adicionar Nota">
+                                                                <i class="fas fa-sticky-note"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-dark contact-edit-btn" data-contact-id="3" title="Editar">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div id="contacts-showing-info">
+                                            Mostrando 1-3 de 42 contatos
+                                        </div>
+                                        <div>
+                                            <nav>
+                                                <ul class="pagination" id="contacts-pagination">
+                                                    <li class="page-item disabled">
+                                                        <a class="page-link" href="#" tabindex="-1">Anterior</a>
+                                                    </li>
+                                                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="#">Próximo</a>
+                                                    </li>
+                                                </ul>
+                                            </nav>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-xl-6 col-lg-6">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">Atividades Recentes</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="activity-timeline" id="recent-activities">
+                                        <div class="activity-item">
+                                            <div class="activity-icon bg-primary">
+                                                <i class="fas fa-phone text-white"></i>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="activity-header">
+                                                    <span class="activity-title">Ligação com João Silva</span>
+                                                    <span class="activity-time">Hoje, 14:30</span>
+                                                </div>
+                                                <div class="activity-description">
+                                                    Conversa sobre proposta comercial. Interessado em avançar para próxima etapa.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="activity-item">
+                                            <div class="activity-icon bg-info">
+                                                <i class="fas fa-envelope text-white"></i>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="activity-header">
+                                                    <span class="activity-title">Email Enviado</span>
+                                                    <span class="activity-time">Hoje, 11:15</span>
+                                                </div>
+                                                <div class="activity-description">
+                                                    Email com proposta enviado para Maria Oliveira. Template: Proposta Comercial.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="activity-item">
+                                            <div class="activity-icon bg-success">
+                                                <i class="fab fa-whatsapp text-white"></i>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="activity-header">
+                                                    <span class="activity-title">WhatsApp Enviado</span>
+                                                    <span class="activity-time">Ontem, 16:45</span>
+                                                </div>
+                                                <div class="activity-description">
+                                                    Mensagem de follow-up enviada para Carlos Santos.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="activity-item">
+                                            <div class="activity-icon bg-warning">
+                                                <i class="fas fa-tags text-white"></i>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="activity-header">
+                                                    <span class="activity-title">Tags Atualizadas</span>
+                                                    <span class="activity-time">01/04/2025, 09:45</span>
+                                                </div>
+                                                <div class="activity-description">
+                                                    3 contatos marcados com a tag "Oportunidade". Ação em massa realizada.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-6 col-lg-6">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                    <h6 class="m-0 font-weight-bold text-primary">Próximos Contatos</h6>
+                                    <button class="btn btn-sm btn-outline-primary" id="add-task-btn">
+                                        <i class="fas fa-plus fa-sm"></i> Novo
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="tasks-container" id="pending-tasks">
+                                        <div class="task-item" data-task-id="1">
+                                            <div class="form-check">
+                                                <input class="form-check-input task-checkbox" type="checkbox" id="task-1" data-task-id="1">
+                                                <label class="form-check-label" for="task-1">
+                                                    <span class="task-title">Ligar para João Silva</span>
+                                                    <span class="task-due badge bg-danger ms-2">Hoje</span>
+                                                </label>
+                                            </div>
+                                            <div class="task-meta">
+                                                <span class="task-assignee">Ana Silva</span>
+                                                <div class="task-actions">
+                                                    <button class="btn btn-sm btn-link task-call-btn" data-contact-id="1">
+                                                        <i class="fas fa-phone"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-link task-edit-btn" data-task-id="1">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-link text-danger task-delete-btn" data-task-id="1">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="task-item" data-task-id="2">
+                                            <div class="form-check">
+                                                <input class="form-check-input task-checkbox" type="checkbox" id="task-2" data-task-id="2">
+                                                <label class="form-check-label" for="task-2">
+                                                    <span class="task-title">Enviar material adicional para Maria Oliveira</span>
+                                                    <span class="task-due badge bg-warning ms-2">Amanhã</span>
+                                                </label>
+                                            </div>
+                                            <div class="task-meta">
+                                                <span class="task-assignee">Carlos Santos</span>
+                                                <div class="task-actions">
+                                                    <button class="btn btn-sm btn-link task-call-btn" data-contact-id="2">
+                                                        <i class="fas fa-phone"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-link task-edit-btn" data-task-id="2">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-link text-danger task-delete-btn" data-task-id="2">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="task-item" data-task-id="3">
+                                            <div class="form-check">
+                                                <input class="form-check-input task-checkbox" type="checkbox" id="task-3" data-task-id="3">
+                                                <label class="form-check-label" for="task-3">
+                                                    <span class="task-title">Preparar proposta para Global Corp</span>
+                                                    <span class="task-due badge bg-info ms-2">05/04/2025</span>
+                                                </label>
+                                            </div>
+                                            <div class="task-meta">
+                                                <span class="task-assignee">Mariana Oliveira</span>
+                                                <div class="task-actions">
+                                                    <button class="btn btn-sm btn-link task-call-btn" data-contact-id="3">
+                                                        <i class="fas fa-phone"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-link task-edit-btn" data-task-id="3">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-link text-danger task-delete-btn" data-task-id="3">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Templates Content -->
+                <div id="templates-content" class="page-section">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Templates de Comunicação</h1>
+                        <button class="btn btn-sm btn-primary shadow-sm" id="new-template-btn">
+                            <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Novo Template
                         </button>
                     </div>
-
-                    <!-- Estatísticas -->
                     <div class="row">
-                        <div class="col-xl-3 col-md-6">
-                            <div class="stat-card stat-card-primary">
-                                <div class="stat-card-content">
-                                    <div class="stat-card-content-left">
-                                        <div class="stat-card-title">Total de Ligações</div>
-                                        <div class="stat-card-value">15,432</div>
-                                    </div>
-                                    <div class="stat-card-icon">
-                                        <i class="fas fa-phone"></i>
-                                    </div>
+                        <div class="col-12">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <ul class="nav nav-tabs card-header-tabs" id="templatesTab" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="call-tab" data-bs-toggle="tab" data-bs-target="#call-templates" type="button" role="tab" aria-controls="call-templates" aria-selected="true">Chamadas</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="email-tab" data-bs-toggle="tab" data-bs-target="#email-templates" type="button" role="tab" aria-controls="email-templates" aria-selected="false">Emails</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="sms-tab" data-bs-toggle="tab" data-bs-target="#sms-templates" type="button" role="tab" aria-controls="sms-templates" aria-selected="false">SMS</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="whatsapp-tab" data-bs-toggle="tab" data-bs-target="#whatsapp-templates" type="button" role="tab" aria-controls="whatsapp-templates" aria-selected="false">WhatsApp</button>
+                                        </li>
+                                    </ul>
                                 </div>
-                                <div class="progress stat-card-progress">
-                                    <div class="progress-bar bg-primary" role="progressbar" style="width: 70%" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-3 col-md-6">
-                            <div class="stat-card stat-card-success">
-                                <div class="stat-card-content">
-                                    <div class="stat-card-content-left">
-                                        <div class="stat-card-title">Taxa de Conversão</div>
-                                        <div class="stat-card-value">23.4%</div>
+                                <div class="card-body">
+                                    <div class="tab-content" id="templatesTabContent">
+                                        <!-- Templates de Chamadas -->
+                                        <div class="tab-pane fade show active" id="call-templates" role="tabpanel" aria-labelledby="call-tab">
+                                            <div class="d-flex justify-content-end mb-3">
+                                                <button class="btn btn-primary" id="new-call-template-btn">
+                                                    <i class="fas fa-plus me-1"></i> Novo Script
+                                                </button>
+                                            </div>
+                                            <div class="list-group">
+                                                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Apresentação Inicial</h6>
+                                                        <p class="mb-1 text-muted small">Olá {{name}}, como vai? Sou da empresa ABC e gostaria de apresentar...</p>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </a>
+                                                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Follow-up de Proposta</h6>
+                                                        <p class="mb-1 text-muted small">Olá {{name}}, estou ligando para verificar se recebeu nossa proposta...</p>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Templates de Email -->
+                                        <div class="tab-pane fade" id="email-templates" role="tabpanel" aria-labelledby="email-tab">
+                                            <div class="d-flex justify-content-end mb-3">
+                                                <button class="btn btn-primary" id="new-email-template-btn">
+                                                    <i class="fas fa-plus me-1"></i> Novo Email
+                                                </button>
+                                            </div>
+                                            <div class="list-group">
+                                                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Boas-vindas</h6>
+                                                        <small class="text-muted">Assunto: Bem-vindo à nossa comunidade, {{name}}!</small>
+                                                        <p class="mb-1 text-muted small">Olá {{name}}, seja bem-vindo! Estamos muito felizes em ter você...</p>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </a>
+                                                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Envio de Proposta</h6>
+                                                        <small class="text-muted">Assunto: Proposta Comercial - {{company}}</small>
+                                                        <p class="mb-1 text-muted small">Prezado(a) {{name}}, Conforme combinado, envio anexo a proposta comercial...</p>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Templates de SMS -->
+                                        <div class="tab-pane fade" id="sms-templates" role="tabpanel" aria-labelledby="sms-tab">
+                                            <div class="d-flex justify-content-end mb-3">
+                                                <button class="btn btn-primary" id="new-sms-template-btn">
+                                                    <i class="fas fa-plus me-1"></i> Novo SMS
+                                                </button>
+                                            </div>
+                                            <div class="list-group">
+                                                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Confirmação de Agendamento</h6>
+                                                        <p class="mb-1 text-muted small">Olá {{name}}, confirmamos seu agendamento para {{date}} às {{time}}. Atenciosamente, Empresa ABC.</p>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </a>
+                                                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Lembrete de Pagamento</h6>
+                                                        <p class="mb-1 text-muted small">Olá {{name}}, lembramos que sua fatura vence em {{days}} dias. Acesse: link.com.br/pagamento</p>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Templates de WhatsApp -->
+                                        <div class="tab-pane fade" id="whatsapp-templates" role="tabpanel" aria-labelledby="whatsapp-tab">
+                                            <div class="d-flex justify-content-end mb-3">
+                                                <button class="btn btn-primary" id="new-whatsapp-template-btn">
+                                                    <i class="fas fa-plus me-1"></i> Novo Template
+                                                </button>
+                                            </div>
+                                            <div class="list-group">
+                                                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Boas-vindas WhatsApp</h6>
+                                                        <p class="mb-1 text-muted small">Olá {{name}}! 👋 Bem-vindo ao nosso WhatsApp. Como podemos ajudar hoje?</p>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </a>
+                                                <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h6 class="mb-1">Follow-up de Cotação</h6>
+                                                        <p class="mb-1 text-muted small">Olá {{name}}! Enviamos a cotação por email. Podemos conversar sobre ela? Estou à disposição.</p>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-sm btn-outline-secondary" title="Editar">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="stat-card-icon">
-                                        <i class="fas fa-percent"></i>
-                                    </div>
-                                </div>
-                                <div class="progress stat-card-progress">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: 23.4%" aria-valuenow="23.4" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-3 col-md-6">
-                            <div class="stat-card stat-card-info">
-                                <div class="stat-card-content">
-                                    <div class="stat-card-content-left">
-                                        <div class="stat-card-title">Leads Gerados</div>
-                                        <div class="stat-card-value">3,687</div>
-                                    </div>
-                                    <div class="stat-card-icon">
-                                        <i class="fas fa-user-plus"></i>
-                                    </div>
-                                </div>
-                                <div class="progress stat-card-progress">
-                                    <div class="progress-bar bg-info" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-3 col-md-6">
-                            <div class="stat-card stat-card-warning">
-                                <div class="stat-card-content">
-                                    <div class="stat-card-content-left">
-                                        <div class="stat-card-title">Duração Média</div>
-                                        <div class="stat-card-value">2m 45s</div>
-                                    </div>
-                                    <div class="stat-card-icon">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
-                                </div>
-                                <div class="progress stat-card-progress">
-                                    <div class="progress-bar bg-warning" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Gráficos -->
-                    <div class="row">
-                        <div class="col-xl-8 col-lg-7">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Performance de Chamadas</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-area">
-                                        <canvas id="callsChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-lg-5">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Distribuição de Status</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-pie">
-                                        <canvas id="statusChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                </div>
+                
+                <!-- Tags Content -->
+                <div id="tags-content" class="page-section">
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">Gerenciamento de Tags</h1>
+                        <button class="btn btn-sm btn-primary shadow-sm" id="new-tag-btn">
+                            <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Nova Tag
+                        </button>
                     </div>
-
-                    <!-- Tabela de Atividades Recentes -->
                     <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Atividades Recentes</h6>
-                        </div>
                         <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control" id="new-tag-name" placeholder="Nome da nova tag">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="color" class="form-control form-control-color" id="new-tag-color" value="#4e73df">
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-primary w-100" id="add-tag-btn">Adicionar</button>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
                             <div class="table-responsive">
-                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                <table class="table table-hover" id="tags-table">
                                     <thead>
                                         <tr>
-                                            <th>Data/Hora</th>
-                                            <th>Agente</th>
-                                            <th>Lead</th>
-                                            <th>Tipo</th>
-                                            <th>Duração</th>
-                                            <th>Status</th>
+                                            <th>Tag</th>
+                                            <th>Cor</th>
+                                            <th>Contatos</th>
                                             <th>Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td>04/04/2025 14:30</td>
-                                            <td>Ana Silva</td>
-                                            <td>João Pereira</td>
-                                            <td>Chamada de Qualificação</td>
-                                            <td>3m 22s</td>
-                                            <td><span class="badge bg-success">Concluída</span></td>
+                                            <td>Cliente VIP</td>
+                                            <td><span class="badge" style="background-color: #4e73df">Cliente VIP</span></td>
+                                            <td>12</td>
                                             <td>
-                                                <button class="btn btn-sm btn-outline-info"><i class="fas fa-eye"></i></button>
-                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-phone"></i></button>
-                                                <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-file-alt"></i></button>
+                                                <button class="btn btn-sm btn-outline-secondary edit-tag-btn" data-tag-id="1">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger delete-tag-btn" data-tag-id="1">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td>04/04/2025 13:15</td>
-                                            <td>Carlos Santos</td>
-                                            <td>Maria Oliveira</td>
-                                            <td>Apresentação de Produto</td>
-                                            <td>5m 45s</td>
-                                            <td><span class="badge bg-success">Concluída</span></td>
+                                            <td>Novo Lead</td>
+                                            <td><span class="badge" style="background-color: #1cc88a">Novo Lead</span></td>
+                                            <td>23</td>
                                             <td>
-                                                <button class="btn btn-sm btn-outline-info"><i class="fas fa-eye"></i></button>
-                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-phone"></i></button>
-                                                <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-file-alt"></i></button>
+                                                <button class="btn btn-sm btn-outline-secondary edit-tag-btn" data-tag-id="2">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger delete-tag-btn" data-tag-id="2">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td>04/04/2025 11:50</td>
-                                            <td>Ana Silva</td>
-                                            <td>Pedro Santos</td>
-                                            <td>Chamada de Follow-up</td>
-                                            <td>2m 12s</td>
-                                            <td><span class="badge bg-warning">Não Atendida</span></td>
+                                            <td>Follow-up Pendente</td>
+                                            <td><span class="badge" style="background-color: #f6c23e">Follow-up Pendente</span></td>
+                                            <td>8</td>
                                             <td>
-                                                <button class="btn btn-sm btn-outline-info"><i class="fas fa-eye"></i></button>
-                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-phone"></i></button>
-                                                <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-file-alt"></i></button>
+                                                <button class="btn btn-sm btn-outline-secondary edit-tag-btn" data-tag-id="3">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger delete-tag-btn" data-tag-id="3">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td>04/04/2025 10:05</td>
-                                            <td>Mariana Oliveira</td>
-                                            <td>Carlos Almeida</td>
-                                            <td>Proposta Comercial</td>
-                                            <td>8m 10s</td>
-                                            <td><span class="badge bg-success">Concluída</span></td>
+                                            <td>Oportunidade</td>
+                                            <td><span class="badge" style="background-color: #e74a3b">Oportunidade</span></td>
+                                            <td>5</td>
                                             <td>
-                                                <button class="btn btn-sm btn-outline-info"><i class="fas fa-eye"></i></button>
-                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-phone"></i></button>
-                                                <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-file-alt"></i></button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>04/04/2025 09:30</td>
-                                            <td>Carlos Santos</td>
-                                            <td>Ana Beatriz</td>
-                                            <td>Chamada Inicial</td>
-                                            <td>4m 05s</td>
-                                            <td><span class="badge bg-info">Agendamento</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-info"><i class="fas fa-eye"></i></button>
-                                                <button class="btn btn-sm btn-outline-primary"><i class="fas fa-phone"></i></button>
-                                                <button class="btn btn-sm btn-outline-secondary"><i class="fas fa-file-alt"></i></button>
+                                                <button class="btn btn-sm btn-outline-secondary edit-tag-btn" data-tag-id="4">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger delete-tag-btn" data-tag-id="4">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -315,464 +879,325 @@
                     </div>
                 </div>
                 
-                <!-- Leads Content -->
-                <div id="leads-content" class="page-section">
+                <!-- Automations Content -->
+                <div id="automations-content" class="page-section">
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Gerenciamento de Leads</h1>
-                        <button class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-                            <i class="fas fa-plus fa-sm text-white-50"></i> Adicionar Lead
+                        <h1 class="h3 mb-0 text-gray-800">Automações</h1>
+                        <button class="btn btn-sm btn-primary shadow-sm" id="new-automation-btn">
+                            <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Nova Automação
                         </button>
                     </div>
                     
                     <div class="card shadow mb-4">
-                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="m-0 font-weight-bold text-primary">Lista de Leads</h6>
-                            <div>
-                                <button class="btn btn-sm btn-outline-primary me-2">
-                                    <i class="fas fa-file-export fa-sm"></i> Exportar
-                                </button>
-                                <button class="btn btn-sm btn-outline-success">
-                                    <i class="fas fa-file-import fa-sm"></i> Importar
-                                </button>
-                            </div>
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Sequências de Automação</h6>
                         </div>
                         <div class="card-body">
-                            <!-- Conteúdo da tabela de leads (mantido) -->
+                            <div class="list-group">
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">Nutrição de Leads</h5>
+                                        <small class="text-success">Ativa</small>
+                                    </div>
+                                    <p class="mb-1">Sequência de 5 passos para nutrir leads novos ao longo de 15 dias.</p>
+                                    <small class="text-muted">Criada em: 01/03/2025</small>
+                                    <div class="mt-2">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-info" title="Ver detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-success" title="Executar">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" title="Excluir">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">Follow-up de Proposta</h5>
+                                        <small class="text-success">Ativa</small>
+                                    </div>
+                                    <p class="mb-1">Sequência de 3 passos para acompanhar propostas enviadas ao longo de 7 dias.</p>
+                                    <small class="text-muted">Criada em: 15/03/2025</small>
+                                    <div class="mt-2">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-info" title="Ver detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-success" title="Executar">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" title="Excluir">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">Reengajamento</h5>
+                                        <small class="text-secondary">Inativa</small>
+                                    </div>
+                                    <p class="mb-1">Sequência de 4 passos para reengajar leads inativos ao longo de 30 dias.</p>
+                                    <small class="text-muted">Criada em: 22/03/2025</small>
+                                    <div class="mt-2">
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-info" title="Ver detalhes">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-success" title="Executar">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" title="Excluir">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Outras seções -->
-                <div id="conversations-content" class="page-section">
+                <!-- Webhooks Content -->
+                <div id="webhooks-content" class="page-section">
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Histórico de Conversas</h1>
-                        <button class="btn btn-sm btn-primary shadow-sm">
-                            <i class="fas fa-filter fa-sm text-white-50"></i> Filtrar
+                        <h1 class="h3 mb-0 text-gray-800">Webhooks e Integrações</h1>
+                        <button class="btn btn-sm btn-primary shadow-sm" id="add-webhook-btn">
+                            <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Novo Webhook
                         </button>
                     </div>
-                    <div class="card shadow mb-4">
+                    
+                    <div class="webhook-manager-container card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Conversas Recentes</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Webhooks Configurados</h6>
                         </div>
                         <div class="card-body">
-                            <p class="mb-4">Esta seção exibirá o histórico de chamadas e conversas realizadas pela plataforma. Aqui você poderá reproduzir gravações e analisar transcrições de diálogos.</p>
-                            <div class="alert alert-info">
-                                Funcionalidade em desenvolvimento. Novas atualizações em breve!
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="webhooks-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>Plataforma</th>
+                                            <th>Eventos</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Novos Leads para Slack</td>
+                                            <td><span class="badge" style="background-color: #FF4A00;">Zapier</span></td>
+                                            <td>
+                                                <span class="badge bg-info me-1">lead.created</span>
+                                            </td>
+                                            <td><span class="badge bg-success">Ativo</span></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary test-webhook-btn" data-webhook-id="1" title="Testar">
+                                                        <i class="fas fa-vial"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary edit-webhook-btn" data-webhook-id="1" title="Editar">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger delete-webhook-btn" data-webhook-id="1" title="Excluir">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Oportunidades para Google Sheets</td>
+                                            <td><span class="badge" style="background-color: #2F8CBB;">Integromat</span></td>
+                                            <td>
+                                                <span class="badge bg-info me-1">lead.status_changed</span>
+                                                <span class="badge bg-info me-1">deal.created</span>
+                                            </td>
+                                            <td><span class="badge bg-success">Ativo</span></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary test-webhook-btn" data-webhook-id="2" title="Testar">
+                                                        <i class="fas fa-vial"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary edit-webhook-btn" data-webhook-id="2" title="Editar">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger delete-webhook-btn" data-webhook-id="2" title="Excluir">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Backup de Dados</td>
+                                            <td><span class="badge bg-secondary">Personalizado</span></td>
+                                            <td>
+                                                <span class="badge bg-info me-1">lead.created</span>
+                                                <span class="badge bg-info me-1">lead.updated</span>
+                                                <span class="badge bg-info me-1">lead.deleted</span>
+                                            </td>
+                                            <td><span class="badge bg-secondary">Inativo</span></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary test-webhook-btn" data-webhook-id="3" title="Testar">
+                                                        <i class="fas fa-vial"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary edit-webhook-btn" data-webhook-id="3" title="Editar">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger delete-webhook-btn" data-webhook-id="3" title="Excluir">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Seção Voice (Tecnologia de Voz) -->
-                <div id="voice-content" class="page-section">
-                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Tecnologia de Voz</h1>
-                        <div>
-                            <a href="voz/" class="btn btn-sm btn-primary shadow-sm me-2">
-                                <i class="fas fa-microphone fa-sm text-white-50"></i> Abrir Interface de Voz
-                            </a>
-                        </div>
-                    </div>
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Reconhecimento e Síntese de Voz</h6>
-                        </div>
-                        <div class="card-body">
-                            <p class="mb-4">A tecnologia de voz do DisparoSeguro utiliza algoritmos avançados de IA para processamento de linguagem natural, reconhecimento de voz e síntese de fala.</p>
-                            <div class="row">
-                                <div class="col-lg-6">
-                                    <div class="card mb-4">
-                                        <div class="card-header py-3">
-                                            <h6 class="m-0 font-weight-bold text-primary">Recursos Disponíveis</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <ul class="list-group">
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    Reconhecimento de Voz
-                                                    <span class="badge bg-success rounded-pill">Ativo</span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    Síntese de Voz Natural
-                                                    <span class="badge bg-success rounded-pill">Ativo</span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    Análise de Sentimento
-                                                    <span class="badge bg-success rounded-pill">Ativo</span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    Transcrição Automática
-                                                    <span class="badge bg-success rounded-pill">Ativo</span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                    Detecção de Intenção
-                                                    <span class="badge bg-warning rounded-pill">Beta</span>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6">
-                                    <div class="alert alert-primary">
-                                        <h5 class="alert-heading">Interface Completa de Voz</h5>
-                                        <p>Para acessar todas as funcionalidades de voz, utilize a Interface de Voz completa.</p>
-                                        <hr>
-                                        <p class="mb-0">
-                                            <a href="voz/" class="btn btn-primary">
-                                                <i class="fas fa-external-link-alt"></i> Acessar Interface de Voz
-                                            </a>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Seções adicionais mantidas do original -->
+                <!-- Outras seções mantidas do original -->
+                <div id="dashboard-content" class="page-section"></div>
+                <div id="leads-content" class="page-section"></div>
+                <div id="communications-content" class="page-section"></div>
                 <div id="campaigns-content" class="page-section"></div>
-                <div id="crm-content" class="page-section"></div>
+                <div id="voice-content" class="page-section"></div>
                 <div id="analytics-content" class="page-section"></div>
-                <div id="flow-builder-content" class="page-section"></div>
-                <div id="ai-models-content" class="page-section"></div>
-                <div id="integrations-content" class="page-section"></div>
                 <div id="settings-content" class="page-section"></div>
             </div>
         </div>
     </div>
 
-    <!-- Novo Botão de Chamada -->
+    <!-- Botão de Chamada Flutuante -->
     <div class="new-call-btn" id="new-call-btn">
         <i class="fas fa-phone"></i>
     </div>
 
-    <!-- Bootstrap, Chart.js and app scripts -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/components/CRM/LeadBulkActions.js"></script>
+    <script src="js/components/CRM/VoIPManager.js"></script>
+    <script src="js/components/CRM/AmbientSoundManager.js"></script>
+    <script src="js/components/CRM/WebhookIntegrationManager.js"></script>
+    <script src="js/components/CRM/CRM.js"></script>
+    <script src="js/app.js"></script>
     
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Função para adicionar eventos a todos os botões
-        function adicionarEventosBotoes() {
-            // Adicionar eventos a todos os botões na aplicação
-            document.querySelectorAll('button:not([data-event-added])').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    // Evita comportamento padrão para links
-                    e.preventDefault();
-                    
-                    // Adiciona classe para efeito visual
-                    this.classList.add('clicked');
-                    setTimeout(() => {
-                        this.classList.remove('clicked');
-                    }, 500);
-                    
-                    // Mensagem no console para debugging
-                    console.log('Botão clicado:', this.innerText || this.innerHTML);
-                    
-                    // Alerta para o usuário
-                    if (this.innerText && this.innerText.trim() !== '') {
-                        alert(`Ação: ${this.innerText.trim()}`);
-                    } else if (this.querySelector('i')) {
-                        // Para botões com apenas ícones
-                        const iconeClasse = this.querySelector('i').className;
-                        if (iconeClasse.includes('eye')) {
-                            alert('Visualizar detalhes');
-                        } else if (iconeClasse.includes('edit') || iconeClasse.includes('pencil')) {
-                            alert('Editar item');
-                        } else if (iconeClasse.includes('trash') || iconeClasse.includes('times')) {
-                            alert('Excluir/Cancelar item');
-                        } else if (iconeClasse.includes('phone')) {
-                            alert('Iniciar chamada');
-                        } else if (iconeClasse.includes('download')) {
-                            alert('Download/Exportar dados');
-                        } else if (iconeClasse.includes('plus')) {
-                            alert('Adicionar novo item');
-                        } else if (iconeClasse.includes('search')) {
-                            alert('Pesquisar');
-                        } else if (iconeClasse.includes('bars')) {
-                            // Não faz nada pois tem tratamento especial
-                        } else {
-                            alert('Ação executada com sucesso!');
-                        }
-                    } else {
-                        alert('Ação executada com sucesso!');
-                    }
-                });
-                
-                // Marca o botão como já tendo recebido evento
-                button.setAttribute('data-event-added', 'true');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar o CRM
+            window.CRM.init(document.getElementById('crm-content'));
+            
+            // Inicializar VoIPManager
+            window.voipManager = new VoIPManager({
+                onCallStart: function(call) {
+                    console.log('Chamada iniciada:', call);
+                },
+                onCallEnd: function(call) {
+                    console.log('Chamada finalizada:', call);
+                }
             });
             
-            // Adicionar eventos a todos os links na aplicação
-            document.querySelectorAll('a:not([data-event-added])').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    // Se não for link para a interface de voz, previne o comportamento padrão
-                    if (!this.href.includes('/voz/')) {
-                        e.preventDefault();
-                        
-                        // Adiciona classe para efeito visual
-                        this.classList.add('clicked');
-                        setTimeout(() => {
-                            this.classList.remove('clicked');
-                        }, 500);
-                        
-                        // Mensagem no console para debugging
-                        console.log('Link clicado:', this.innerText || this.innerHTML);
-                        
-                        // Alerta para dropdown do usuário
-                        if (this.closest('.dropdown-menu')) {
-                            alert(`Menu: ${this.innerText.trim()}`);
-                        } else {
-                            alert(`Link: ${this.innerText.trim() || 'Navegação'}`);
-                        }
+            // Inicializar gerenciador de sons ambientes
+            window.ambientSoundManager = new AmbientSoundManager();
+            
+            // Inicializar gerenciador de webhooks
+            window.webhookManager = new WebhookIntegrationManager();
+            
+            // Navegação do sidebar
+            const navItems = document.querySelectorAll('.sidebar-nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // Remover classe ativa de todos os itens
+                    navItems.forEach(i => i.classList.remove('active'));
+                    
+                    // Adicionar classe ativa ao item clicado
+                    this.classList.add('active');
+                    
+                    // Obter a página a ser exibida
+                    const page = this.getAttribute('data-page');
+                    
+                    // Esconder todas as seções
+                    document.querySelectorAll('.page-section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    // Mostrar a seção correspondente
+                    const pageSection = document.getElementById(`${page}-content`);
+                    if (pageSection) {
+                        pageSection.classList.add('active');
                     }
                 });
-                
-                // Marca o link como já tendo recebido evento
-                link.setAttribute('data-event-added', 'true');
             });
             
-            // Adicionar eventos para badges e notificações
-            document.querySelectorAll('.notification-badge:not([data-event-added]), .badge:not([data-event-added])').forEach(badge => {
-                badge.addEventListener('click', function(e) {
-                    e.preventDefault();
+            // Botão de toggle do sidebar
+            const toggleSidebarBtn = document.querySelector('.toggle-sidebar');
+            if (toggleSidebarBtn) {
+                toggleSidebarBtn.addEventListener('click', function() {
+                    const sidebar = document.querySelector('.sidebar');
+                    const mainContent = document.querySelector('.main-content');
                     
-                    // Adiciona classe para efeito visual
-                    this.classList.add('clicked');
-                    setTimeout(() => {
-                        this.classList.remove('clicked');
-                    }, 500);
-                    
-                    if (this.querySelector('.fa-bell')) {
-                        alert('Notificações: 3 novas notificações');
-                    } else if (this.querySelector('.fa-envelope')) {
-                        alert('Mensagens: 7 novas mensagens');
+                    sidebar.classList.toggle('minimized');
+                    if (sidebar.classList.contains('minimized')) {
+                        sidebar.style.width = '80px';
+                        mainContent.style.marginLeft = '80px';
+                        
+                        // Esconder textos
+                        document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3').forEach(el => {
+                            el.style.display = 'none';
+                        });
+                        
+                        // Centralizar ícones
+                        document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+                            el.style.justifyContent = 'center';
+                            el.style.padding = '1rem';
+                        });
                     } else {
-                        alert('Informação visualizada');
+                        sidebar.style.width = '250px';
+                        mainContent.style.marginLeft = '250px';
+                        
+                        // Mostrar textos
+                        document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3').forEach(el => {
+                            el.style.display = 'inline';
+                        });
+                        
+                        // Voltar layout dos itens
+                        document.querySelectorAll('.sidebar-nav-item').forEach(el => {
+                            el.style.justifyContent = 'flex-start';
+                            el.style.padding = '0.8rem 1.5rem';
+                        });
                     }
                 });
-                
-                badge.setAttribute('data-event-added', 'true');
-            });
-        }
-        
-        // Navegação do sidebar - atualizada para mostrar as seções corretas
-        const navItems = document.querySelectorAll('.sidebar-nav-item');
-        navItems.forEach(item => {
-            item.addEventListener('click', function() {
-                // Adiciona classe para efeito visual
-                this.classList.add('clicked');
-                setTimeout(() => {
-                    this.classList.remove('clicked');
-                }, 500);
-                
-                // Remover classe ativa de todos os itens
-                navItems.forEach(i => i.classList.remove('active'));
-                
-                // Adicionar classe ativa ao item clicado
-                this.classList.add('active');
-                
-                // Obter a página a ser exibida
-                const page = this.getAttribute('data-page');
-                console.log(`Navegando para: ${page}`);
-                
-                // Esconder todas as seções
-                document.querySelectorAll('.page-section').forEach(section => {
-                    section.classList.remove('active');
+            }
+            
+            // Botão de nova chamada
+            const newCallBtn = document.getElementById('new-call-btn');
+            if (newCallBtn) {
+                newCallBtn.addEventListener('click', function() {
+                    voipManager.connect().then(() => {
+                        // Perguntar para qual número ligar
+                        const number = prompt('Digite o número para o qual deseja ligar:');
+                        if (number) {
+                            voipManager.startCall(number);
+                        }
+                    });
                 });
-                
-                // Mostrar a seção correspondente
-                const pageSection = document.getElementById(`${page}-content`);
-                if (pageSection) {
-                    pageSection.classList.add('active');
-                }
-                
-                // Alerta para navegação
-                alert(`Navegando para seção: ${page}`);
-            });
+            }
         });
-        
-        // Configura o botão de toggle do menu
-        const toggleSidebarBtn = document.querySelector('.toggle-sidebar');
-        if (toggleSidebarBtn) {
-            toggleSidebarBtn.addEventListener('click', function() {
-                // Adiciona classe para efeito visual
-                this.classList.add('clicked');
-                setTimeout(() => {
-                    this.classList.remove('clicked');
-                }, 500);
-                
-                const sidebar = document.querySelector('.sidebar');
-                const mainContent = document.querySelector('.main-content');
-                
-                sidebar.classList.toggle('minimized');
-                if (sidebar.classList.contains('minimized')) {
-                    sidebar.style.width = '100px';
-                    mainContent.style.marginLeft = '100px';
-                    
-                    // Esconder textos
-                    document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3').forEach(el => {
-                        el.style.display = 'none';
-                    });
-                    
-                    // Centralizar ícones
-                    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
-                        el.style.justifyContent = 'center';
-                        el.style.padding = '1rem';
-                    });
-                    
-                    document.querySelectorAll('.sidebar-nav-item i').forEach(el => {
-                        el.style.marginRight = '0';
-                    });
-                    
-                    // Mostrar alerta
-                    alert('Menu lateral minimizado');
-                } else {
-                    sidebar.style.width = '250px';
-                    mainContent.style.marginLeft = '250px';
-                    
-                    // Mostrar textos
-                    document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3').forEach(el => {
-                        el.style.display = 'inline';
-                    });
-                    
-                    // Voltar layout dos itens
-                    document.querySelectorAll('.sidebar-nav-item').forEach(el => {
-                        el.style.justifyContent = 'flex-start';
-                        el.style.padding = '0.8rem 1.5rem';
-                    });
-                    
-                    document.querySelectorAll('.sidebar-nav-item i').forEach(el => {
-                        el.style.marginRight = '0.8rem';
-                    });
-                    
-                    // Mostrar alerta
-                    alert('Menu lateral expandido');
-                }
-            });
-        }
-        
-        // Ativa o botão de nova chamada
-        const newCallBtn = document.getElementById('new-call-btn');
-        if (newCallBtn) {
-            newCallBtn.addEventListener('click', function() {
-                this.classList.add('clicked');
-                setTimeout(() => {
-                    this.classList.remove('clicked');
-                }, 500);
-                
-                alert('Iniciando nova chamada...');
-            });
-        }
-        
-        // Inicializar gráficos
-        const callsCtx = document.getElementById('callsChart');
-        const statusCtx = document.getElementById('statusChart');
-        
-        if (callsCtx) {
-            // Gráfico de linha para chamadas
-            const callsChart = new Chart(callsCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'],
-                    datasets: [{
-                        label: 'Chamadas Realizadas',
-                        lineTension: 0.3,
-                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
-                        borderColor: 'rgba(78, 115, 223, 1)',
-                        pointRadius: 3,
-                        pointBackgroundColor: 'rgba(78, 115, 223, 1)',
-                        pointBorderColor: 'rgba(78, 115, 223, 1)',
-                        pointHoverRadius: 5,
-                        pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
-                        pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
-                        pointHitRadius: 10,
-                        pointBorderWidth: 2,
-                        data: [1200, 1800, 2400, 3200, 4000, 4500, 5200],
-                    }],
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: {
-                                display: false,
-                                drawBorder: false
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                maxTicksLimit: 5,
-                            },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)',
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        if (statusCtx) {
-            // Gráfico de pizza para status
-            const statusChart = new Chart(statusCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Concluídas', 'Agendadas', 'Não Atendidas', 'Canceladas'],
-                    datasets: [{
-                        data: [55, 15, 20, 10],
-                        backgroundColor: ['#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
-                        hoverBackgroundColor: ['#169a6f', '#2c9faf', '#dda20a', '#be3a2d'],
-                        hoverBorderColor: "rgba(234, 236, 244, 1)",
-                    }],
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    },
-                    cutout: '60%',
-                }
-            });
-        }
-        
-        // Inicializar tooltips do Bootstrap
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        if (typeof bootstrap !== 'undefined') {
-            const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl)
-            });
-        }
-        
-        // Adicionar eventos iniciais
-        adicionarEventosBotoes();
-        
-        // Verificar se as imagens foram carregadas corretamente
-        document.querySelectorAll('img').forEach(img => {
-            img.addEventListener('error', function() {
-                console.log('Erro ao carregar imagem:', this.src);
-                if (this.classList.contains('logo') && !this.getAttribute('data-fallback-applied')) {
-                    this.setAttribute('data-fallback-applied', 'true');
-                    this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgMS45OTJoM2EyIDIgMCAwIDEgMiAydjE2YTIgMiAwIDAgMS0yIDJIOGEyIDIgMCAwIDEtMi0ydi0xNmEyIDIgMCAwIDEgMi0yaDF2LTJoMnYyeiI+PC9wYXRoPjxyZWN0IHg9IjkiIHk9IjEzIiB3aWR0aD0iNCIgaGVpZ2h0PSI2Ij48L3JlY3Q+PGNpcmNsZSBjeD0iMTEiIGN5PSI4IiByPSIyIj48L2NpcmNsZT48L3N2Zz4=';
-                } else if (this.classList.contains('user-avatar') && !this.getAttribute('data-fallback-applied')) {
-                    this.setAttribute('data-fallback-applied', 'true');
-                    this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjNGU3M2RmIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0iZmVhdGhlciBmZWF0aGVyLXVzZXIiPjxwYXRoIGQ9Ik0yMCAyMXYtMmE0IDQgMCAwIDAtNC00SDhhNCA0IDAgMCAwLTQgNHYyIj48L3BhdGg+PGNpcmNsZSBjeD0iMTIiIGN5PSI3IiByPSI0Ij48L2NpcmNsZT48L3N2Zz4=';
-                }
-            });
-        });
-        
-        // Mostrar mensagem de boas-vindas com domínio correto
-        setTimeout(() => {
-            alert('Bem-vindo à Plataforma DisparoSeguro.shop!\n\nTodos os botões e elementos são clicáveis e mostrarão alertas para demonstrar a funcionalidade.');
-        }, 1000);
-    });
     </script>
 </body>
 </html>
