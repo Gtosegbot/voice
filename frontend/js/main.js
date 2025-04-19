@@ -257,36 +257,108 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function toastSuccess(message) {
         console.log('Sucesso:', message);
-        // Mostrar toast de sucesso - implementação depende da biblioteca de UI
-        if (typeof showToast === 'function') {
-            showToast('success', message);
-        } else {
-            // Fallback para alert
-            alert(message);
-        }
+        // Mostrar toast de sucesso - implementação simplificada
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification toast-success';
+        toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '1';
+        }, 10);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
     }
     
     function toastInfo(message) {
         console.log('Info:', message);
-        // Mostrar toast informativo
-        if (typeof showToast === 'function') {
-            showToast('info', message);
-        } else {
-            // Fallback para alert
-            alert(message);
-        }
+        // Mostrar toast informativo - implementação simplificada
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification toast-info';
+        toast.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '1';
+        }, 10);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
     }
     
     function toastError(message) {
         console.error('Erro:', message);
-        // Mostrar toast de erro
-        if (typeof showToast === 'function') {
-            showToast('error', message);
-        } else {
-            // Fallback para alert
-            alert('Erro: ' + message);
-        }
+        // Mostrar toast de erro - implementação simplificada
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification toast-error';
+        toast.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '1';
+        }, 10);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
     }
+    
+    // Adicionar CSS para os toasts
+    const toastStyles = document.createElement('style');
+    toastStyles.textContent = `
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background-color: white;
+            color: #333;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            min-width: 250px;
+            max-width: 450px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .toast-notification i {
+            margin-right: 12px;
+            font-size: 20px;
+        }
+        .toast-success {
+            border-left: 4px solid #1cc88a;
+        }
+        .toast-success i {
+            color: #1cc88a;
+        }
+        .toast-info {
+            border-left: 4px solid #4e73df;
+        }
+        .toast-info i {
+            color: #4e73df;
+        }
+        .toast-error {
+            border-left: 4px solid #e74a3b;
+        }
+        .toast-error i {
+            color: #e74a3b;
+        }
+    `;
+    document.head.appendChild(toastStyles);
     
     function confirmDelete() {
         if (confirm('Tem certeza que deseja excluir este item?')) {
@@ -315,10 +387,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function handleSearch() {
-        const searchInput = document.querySelector('.search-input');
+        const searchInput = document.querySelector('.search-bar input');
         if (searchInput) {
-            const searchTerm = searchInput.value;
-            toastInfo(`Pesquisando por: ${searchTerm}`);
+            const searchTerm = searchInput.value.trim();
+            if (searchTerm) {
+                toastInfo(`Pesquisando por: ${searchTerm}`);
+            } else {
+                toastInfo('Digite um termo para pesquisar');
+            }
         } else {
             toastInfo('Pesquisando...');
         }
@@ -331,12 +407,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!sidebar || !mainContent) return;
         
         sidebar.classList.toggle('minimized');
+        
         if (sidebar.classList.contains('minimized')) {
             sidebar.style.width = '70px';
             mainContent.style.marginLeft = '70px';
             
             // Esconder textos
-            document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3').forEach(el => {
+            document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3, .sidebar-footer').forEach(el => {
                 el.style.display = 'none';
             });
             
@@ -357,6 +434,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.sidebar-nav-item span, .sidebar-header h3').forEach(el => {
                 el.style.display = 'inline';
             });
+            
+            document.querySelector('.sidebar-footer').style.display = 'block';
             
             // Voltar layout dos itens
             document.querySelectorAll('.sidebar-nav-item').forEach(el => {
@@ -460,48 +539,95 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar a aplicação
     adicionarEventosBotoes();
     
+    // Inicializar gráficos se estiverem presentes
+    initializeCharts();
+    
     // Mostrar mensagem de boas-vindas com delay reduzido
     setTimeout(() => {
         console.log('Bem-vindo à Plataforma DisparoSeguro!');
-        // Usar toast em vez de alert para não bloquear
         toastSuccess('Bem-vindo à Plataforma DisparoSeguro!');
     }, 500);
-    
-    // Verificar conexão com o WebSocket
-    try {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsHost = window.location.hostname;
-        const wsPort = 8765;
-        const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`;
-        
-        console.log(`Tentando conectar ao WebSocket: ${wsUrl}`);
-        
-        // Implementação de WebSocket com reconexão automática
-        window.wsConnect = function() {
-            const ws = new WebSocket(wsUrl);
-            
-            ws.onopen = function() {
-                console.log('Conexão WebSocket estabelecida');
-                toastSuccess('Conexão com servidor estabelecida');
-            };
-            
-            ws.onclose = function() {
-                console.log('Conexão WebSocket fechada. Tentando reconectar em 5s...');
-                setTimeout(window.wsConnect, 5000);
-            };
-            
-            ws.onerror = function(error) {
-                console.error('Erro WebSocket:', error);
-            };
-            
-            return ws;
-        };
-        
-        // Iniciar conexão dummy para demonstração
-        setTimeout(() => {
-            console.log("Simulando conexão WebSocket em ambiente de desenvolvimento");
-        }, 1000);
-    } catch (error) {
-        console.error("Erro ao configurar WebSocket:", error);
-    }
 });
+
+// Função para inicializar gráficos
+function initializeCharts() {
+    // Verificar se Chart.js está disponível
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js não encontrado. Os gráficos não serão renderizados.');
+        return;
+    }
+    
+    // Gráfico de linha para chamadas
+    const ctxCalls = document.getElementById('callsChart');
+    if (ctxCalls) {
+        new Chart(ctxCalls, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul'],
+                datasets: [{
+                    label: 'Chamadas Realizadas',
+                    data: [1200, 1900, 3000, 5000, 6000, 8500, 10000],
+                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                    pointBorderColor: 'rgba(78, 115, 223, 1)',
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+                    pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfico de pizza para status
+    const ctxStatus = document.getElementById('statusChart');
+    if (ctxStatus) {
+        new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: ['Concluídas', 'Não Atendidas', 'Agendamentos', 'Em Andamento'],
+                datasets: [{
+                    data: [55, 15, 20, 10],
+                    backgroundColor: ['#1cc88a', '#e74a3b', '#36b9cc', '#f6c23e'],
+                    hoverBackgroundColor: ['#17a673', '#d52a1a', '#2c9faf', '#dda20a'],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                cutout: '75%'
+            }
+        });
+    }
+}
