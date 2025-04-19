@@ -26,7 +26,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    transition: width 0.3s;
+    transition: width 0.3s, transform 0.3s;
     position: fixed;
     top: 0;
     left: 0;
@@ -78,12 +78,17 @@ body {
     width: 20px;
     margin-right: 0.8rem;
     text-align: center;
+    transition: transform 0.2s ease;
 }
 
 .sidebar-nav-item.active, .sidebar-nav-item:hover {
     color: white;
     background-color: rgba(255, 255, 255, 0.1);
     border-left: 4px solid white;
+}
+
+.sidebar-nav-item:hover i, .sidebar-nav-item.active i {
+    transform: scale(1.1);
 }
 
 .sidebar-footer {
@@ -178,6 +183,7 @@ body {
     position: relative;
     color: #5a5c69;
     margin-right: 1.5rem;
+    cursor: pointer;
 }
 
 .badge-counter {
@@ -381,26 +387,54 @@ button, a, .sidebar-nav-item, .dropdown-toggle, .notification-badge, .new-call-b
     cursor: pointer !important;
 }
 
+/* Comportamento do sidebar colapsado/minimizado */
+.sidebar.minimized {
+    width: 70px;
+}
+
+.sidebar.minimized .sidebar-header h3,
+.sidebar.minimized .sidebar-nav-item span,
+.sidebar.minimized .sidebar-footer {
+    display: none;
+}
+
+.sidebar.minimized .sidebar-nav-item {
+    justify-content: center;
+    padding: 1rem;
+}
+
+.sidebar.minimized .sidebar-nav-item i {
+    margin-right: 0;
+}
+
+/* Feedback visual ao clicar */
+button:active, .btn:active, a:active, .sidebar-nav-item:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+}
+
+/* Melhoria nos efeitos de hover */
+button:hover, .btn:hover, a:hover, .sidebar-nav-item:hover {
+    opacity: 0.9;
+    transition: opacity 0.2s ease;
+}
+
+/* Media queries para responsividade */
 @media (max-width: 768px) {
-    .sidebar {
-        width: 100px;
+    .sidebar:not(.minimized) {
+        transform: translateX(-100%);
     }
     
-    .sidebar-header h3, .sidebar-nav-item span {
-        display: none;
-    }
-    
-    .sidebar-nav-item {
-        justify-content: center;
-        padding: 1rem;
-    }
-    
-    .sidebar-nav-item i {
-        margin-right: 0;
+    .sidebar.minimized {
+        transform: translateX(0);
     }
     
     .main-content {
-        margin-left: 100px;
+        margin-left: 0;
+    }
+    
+    .sidebar.minimized + .main-content {
+        margin-left: 70px;
     }
     
     .search-bar input {
