@@ -11,7 +11,9 @@ class SocketService {
         this.maxReconnectAttempts = 5;
         this.reconnectInterval = 3000;
         this.eventHandlers = {};
-        this.baseUrl = 'ws://localhost:8765';
+        this.baseUrl = window.location.hostname === 'localhost'
+            ? 'ws://localhost:8765'
+            : 'wss://ws.disparoseguro.shop';
     }
 
     /**

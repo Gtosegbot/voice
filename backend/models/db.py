@@ -2,31 +2,38 @@
 Database models for the VoiceAI platform
 """
 
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Date
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime
 
-db = SQLAlchemy()
+# Criar engine e base
+engine = create_engine('sqlite:///voiceai.db')
+Base = declarative_base()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Define callback types for relationship references before class declaration
 callbacks_backref = None
 
-class User(db.Model):
+
+class User(Base):
     """User model for authentication and user management"""
     __tablename__ = 'users'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), nullable=False, unique=True)
-    password = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(50), default='agent')
-    phone = db.Column(db.String(50))
-    job_title = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(100), nullable=False, unique=True)
+    password = Column(String(255), nullable=False)
+    role = Column(String(50), default='agent')
+    phone = Column(String(50))
+    job_title = Column(String(100))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
     # Relationships
-    leads = db.relationship('Lead', backref='assigned_agent', lazy=True)
-    
+    leads = relationship('Lead', backref='assigned_agent', lazy=True)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -41,28 +48,29 @@ class User(db.Model):
         }
 
 
-class Lead(db.Model):
+class Lead(Base):
     """Lead model for lead management"""
     __tablename__ = 'leads'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    company = db.Column(db.String(100))
-    phone = db.Column(db.String(50))
-    email = db.Column(db.String(100))
-    status = db.Column(db.String(50), default='new')
-    score = db.Column(db.Integer, default=0)
-    source = db.Column(db.String(50))
-    agent_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    campaign_id = db.Column(db.Integer, db.ForeignKey('campaigns.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    company = Column(String(100))
+    phone = Column(String(50))
+    email = Column(String(100))
+    status = Column(String(50), default='new')
+    score = Column(Integer, default=0)
+    source = Column(String(50))
+    agent_id = Column(Integer, ForeignKey('users.id'))
+    campaign_id = Column(Integer, ForeignKey('campaigns.id'))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+    last_activity = Column(DateTime, default=datetime.utcnow)
+
     # Relationships
-    conversations = db.relationship('Conversation', backref='lead', lazy=True)
-    notes = db.relationship('Note', backref='lead', lazy=True)
-    
+    conversations = relationship('Conversation', backref='lead', lazy=True)
+    notes = relationship('Note', backref='lead', lazy=True)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -82,24 +90,25 @@ class Lead(db.Model):
         }
 
 
-class Campaign(db.Model):
+class Campaign(Base):
     """Campaign model for marketing campaigns"""
     __tablename__ = 'campaigns'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    status = db.Column(db.String(50), default='draft')
-    target_leads = db.Column(db.Integer, default=0)
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    status = Column(String(50), default='draft')
+    target_leads = Column(Integer, default=0)
+    start_date = Column(Date)
+    end_date = Column(Date)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
     # Relationships
-    leads = db.relationship('Lead', backref='campaign', lazy=True)
-    flows = db.relationship('Flow', backref='campaign', lazy=True)
-    
+    leads = relationship('Lead', backref='campaign', lazy=True)
+    flows = relationship('Flow', backref='campaign', lazy=True)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -115,24 +124,25 @@ class Campaign(db.Model):
         }
 
 
-class Conversation(db.Model):
+class Conversation(Base):
     """Conversation model for tracking interactions with leads"""
     __tablename__ = 'conversations'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    lead_id = db.Column(db.Integer, db.ForeignKey('leads.id'), nullable=False)
-    channel = db.Column(db.String(50), nullable=False)
-    status = db.Column(db.String(50), default='active')
-    lead_score = db.Column(db.Integer)
-    lead_status = db.Column(db.String(50))
-    lead_source = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_activity_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    lead_id = Column(Integer, ForeignKey('leads.id'), nullable=False)
+    channel = Column(String(50), nullable=False)
+    status = Column(String(50), default='active')
+    lead_score = Column(Integer)
+    lead_status = Column(String(50))
+    lead_source = Column(String(50))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+    last_activity_at = Column(DateTime, default=datetime.utcnow)
+
     # Relationships
-    messages = db.relationship('Message', backref='conversation', lazy=True)
-    
+    messages = relationship('Message', backref='conversation', lazy=True)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -149,18 +159,21 @@ class Conversation(db.Model):
         }
 
 
-class Message(db.Model):
+class Message(Base):
     """Message model for storing conversation messages"""
     __tablename__ = 'messages'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'), nullable=False)
-    sender_type = db.Column(db.String(50), nullable=False)  # 'system', 'agent', 'lead', 'ai'
-    sender_id = db.Column(db.Integer)  # User ID if sender_type is 'agent'
-    content = db.Column(db.Text, nullable=False)
-    message_type = db.Column(db.String(50), default='text')  # 'text', 'audio', 'image', 'file'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    conversation_id = Column(Integer, ForeignKey(
+        'conversations.id'), nullable=False)
+    # 'system', 'agent', 'lead', 'ai'
+    sender_type = Column(String(50), nullable=False)
+    sender_id = Column(Integer)  # User ID if sender_type is 'agent'
+    content = Column(Text, nullable=False)
+    # 'text', 'audio', 'image', 'file'
+    message_type = Column(String(50), default='text')
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -174,28 +187,29 @@ class Message(db.Model):
         }
 
 
-class Call(db.Model):
+class Call(Base):
     """Call model for tracking voice calls"""
     __tablename__ = 'calls'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'))
-    lead_id = db.Column(db.Integer, db.ForeignKey('leads.id'))
-    agent_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    direction = db.Column(db.String(50), nullable=False)  # 'inbound', 'outbound'
-    status = db.Column(db.String(50), default='ringing')  # 'ringing', 'in-progress', 'completed', 'missed', 'failed'
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
-    duration = db.Column(db.Integer)  # in seconds
-    recording_url = db.Column(db.String(255))
-    transcript = db.Column(db.Text)
-    call_notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    lead_id = Column(Integer, ForeignKey('leads.id'))
+    agent_id = Column(Integer, ForeignKey('users.id'))
+    direction = Column(String(50), nullable=False)  # 'inbound', 'outbound'
+    # 'ringing', 'in-progress', 'completed', 'missed', 'failed'
+    status = Column(String(50), default='ringing')
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    duration = Column(Integer)  # in seconds
+    recording_url = Column(String(255))
+    transcript = Column(Text)
+    call_notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     # Relationships
-    lead = db.relationship('Lead', backref='calls', lazy=True)
-    agent = db.relationship('User', backref='calls', lazy=True)
-    
+    lead = relationship('Lead', backref='calls', lazy=True)
+    agent = relationship('User', backref='calls', lazy=True)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -215,20 +229,21 @@ class Call(db.Model):
         }
 
 
-class Note(db.Model):
+class Note(Base):
     """Note model for lead notes"""
     __tablename__ = 'notes'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    lead_id = db.Column(db.Integer, db.ForeignKey('leads.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    note_type = db.Column(db.String(50), default='general')  # 'general', 'call', 'meeting', 'task'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    lead_id = Column(Integer, ForeignKey('leads.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    content = Column(Text, nullable=False)
+    # 'general', 'call', 'meeting', 'task'
+    note_type = Column(String(50), default='general')
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     # Relationships
-    user = db.relationship('User', backref='notes', lazy=True)
-    
+    user = relationship('User', backref='notes', lazy=True)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -245,20 +260,23 @@ class Note(db.Model):
         }
 
 
-class Flow(db.Model):
+class Flow(Base):
     """Flow model for conversation flows"""
     __tablename__ = 'flows'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    trigger_type = db.Column(db.String(50), nullable=False)  # 'inbound', 'outbound', 'message', 'webhook'
-    status = db.Column(db.String(50), default='draft')  # 'draft', 'active', 'inactive'
-    campaign_id = db.Column(db.Integer, db.ForeignKey('campaigns.id'))
-    nodes = db.Column(db.Text)  # JSON string of nodes
-    connections = db.Column(db.Text)  # JSON string of connections
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    # 'inbound', 'outbound', 'message', 'webhook'
+    trigger_type = Column(String(50), nullable=False)
+    # 'draft', 'active', 'inactive'
+    status = Column(String(50), default='draft')
+    campaign_id = Column(Integer, ForeignKey('campaigns.id'))
+    nodes = Column(Text)  # JSON string of nodes
+    connections = Column(Text)  # JSON string of connections
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -274,23 +292,27 @@ class Flow(db.Model):
         }
 
 
-class Setting(db.Model):
+class Setting(Base):
     """Settings model for system and user settings"""
     __tablename__ = 'settings'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))  # NULL for system settings
-    category = db.Column(db.String(50), nullable=False)  # 'system', 'user', 'telephony', 'ai', etc.
-    key = db.Column(db.String(100), nullable=False)
-    value = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id')
+                     )  # NULL for system settings
+    # 'system', 'user', 'telephony', 'ai', etc.
+    category = Column(String(50), nullable=False)
+    key = Column(String(100), nullable=False)
+    value = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
     # Unique constraint for user_id, category, key
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'category', 'key', name='unique_setting'),
+        db.UniqueConstraint('user_id', 'category', 'key',
+                            name='unique_setting'),
     )
-    
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -304,25 +326,27 @@ class Setting(db.Model):
         }
 
 
-class Callback(db.Model):
+class Callback(Base):
     """Callback model for scheduled return calls"""
     __tablename__ = 'callbacks'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    lead_id = db.Column(db.Integer, db.ForeignKey('leads.id'), nullable=False)
-    agent_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    scheduled_at = db.Column(db.DateTime, nullable=False)
-    notes = db.Column(db.Text)
-    status = db.Column(db.String(50), default='scheduled')  # scheduled, completed, missed, canceled
-    call_id = db.Column(db.Integer, db.ForeignKey('calls.id'))  # Associated call if any
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    lead_id = Column(Integer, ForeignKey('leads.id'), nullable=False)
+    agent_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    scheduled_at = Column(DateTime, nullable=False)
+    notes = Column(Text)
+    # scheduled, completed, missed, canceled
+    status = Column(String(50), default='scheduled')
+    call_id = Column(Integer, ForeignKey('calls.id'))  # Associated call if any
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
     # Relationships
-    lead = db.relationship('Lead', backref='callbacks', lazy=True)
-    agent = db.relationship('User', backref='callbacks', lazy=True)
-    reminders = db.relationship('Reminder', backref='callback', lazy=True)
-    
+    lead = relationship('Lead', backref='callbacks', lazy=True)
+    agent = relationship('User', backref='callbacks', lazy=True)
+    reminders = relationship('Reminder', backref='callback', lazy=True)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {
@@ -345,19 +369,21 @@ class Callback(db.Model):
         }
 
 
-class Reminder(db.Model):
+class Reminder(Base):
     """Reminder model for callback notifications"""
     __tablename__ = 'reminders'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    callback_id = db.Column(db.Integer, db.ForeignKey('callbacks.id'), nullable=False)
-    reminder_time = db.Column(db.DateTime, nullable=False)
-    channel = db.Column(db.String(50), nullable=False)  # whatsapp, sms, email
-    status = db.Column(db.String(50), default='pending')  # pending, sent, failed, canceled
-    error = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    id = Column(Integer, primary_key=True)
+    callback_id = Column(Integer, ForeignKey('callbacks.id'), nullable=False)
+    reminder_time = Column(DateTime, nullable=False)
+    channel = Column(String(50), nullable=False)  # whatsapp, sms, email
+    # pending, sent, failed, canceled
+    status = Column(String(50), default='pending')
+    error = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
+
     def to_dict(self):
         """Convert instance to dictionary"""
         return {

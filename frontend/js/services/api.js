@@ -5,7 +5,7 @@
 // API base URL - Detect environment for API URL
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:5001/api' 
-    : (window.location.protocol + '//' + window.location.hostname + ':5001/api');
+    : 'https://api.disparoseguro.shop/api';
 
 /**
  * Send a request to the API

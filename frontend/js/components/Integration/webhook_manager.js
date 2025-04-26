@@ -977,17 +977,11 @@ class WebhookIntegrationManager {
    * @private
    */
   _detectBaseURL() {
-    try {
-      // Tentar usar origem da janela
-      if (typeof window !== 'undefined') {
-        return window.location.origin;
-      }
-      
+    if (window.location.hostname === 'localhost') {
       // Fallback para localhost
       return 'http://localhost:8000';
-    } catch (error) {
-      return 'http://localhost:8000';
     }
+    return 'https://webhook.disparoseguro.shop';
   }
   
   /**
